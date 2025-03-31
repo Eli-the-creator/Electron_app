@@ -3,6 +3,56 @@ import { electronAPI } from "@electron-toolkit/preload";
 
 // Define API for user interface
 const api = {
+    // LLM API for multiple providers (OpenAI, Anthropic, Gemini)
+    llm: {
+      // Load LLM configuration
+      loadConfig: () => ipcRenderer.invoke("load-llm-config"),
+  
+      // Save LLM configuration
+      saveConfig: (config: {
+        provider: string;
+        apiKey: string;
+        model: string;
+        maxTokens: number;
+        temperature: number;
+      }) => ipcRenderer.invoke("save-llm-config", config),
+  
+      // Get default config for a provider
+      getProviderDefaults: (provider: string) =>
+        ipcRenderer.invoke("get-llm-provider-defaults", provider),
+  
+      // Get model options for a provider
+      getModelOptions: (provider: string) =>
+        ipcRenderer.invoke("get-llm-model-options", provider),
+    },
+
+    // OpenAI API
+    openai: {
+      // Generate response using OpenAI API
+      generateResponse: (params: {
+        texts: string[];
+        images: string[];
+        streaming?: boolean;
+      }) => ipcRenderer.invoke("generate-openai-response", params),
+    
+      // Stop generation
+      stopGeneration: () => ipcRenderer.invoke("stop-openai-generation"),
+    },
+    
+    // Anthropic API
+    anthropic: {
+      // Generate response using Anthropic API
+      generateResponse: (params: {
+        texts: string[];
+        images: string[];
+        streaming?: boolean;
+      }) => ipcRenderer.invoke("generate-anthropic-response", params),
+
+  // Stop generation
+  stopGeneration: () => ipcRenderer.invoke("stop-anthropic-generation"),
+},
+
+  
   // Audio and speech recognition
   audio: {
     // Initialize audio capture

@@ -1,21 +1,6 @@
 "use strict";
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-require("node:fs");
-require("node:path");
 const index = require("./index.js");
-require("electron");
-require("path");
-require("@electron-toolkit/utils");
-require("fs");
-require("@deepgram/sdk");
-require("node:http");
-require("node:https");
-require("node:zlib");
-require("node:stream");
-require("node:buffer");
-require("node:util");
-require("node:url");
-require("node:net");
 let s = 0;
 const S = {
   START_BOUNDARY: s++,

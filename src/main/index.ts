@@ -17,6 +17,10 @@ import { setupAudioCapture } from "./services/audio-capture";
 import { registerHotkeys } from "./services/hotkeys";
 import { setupQueueService } from "./services/queue";
 import { setupDeepgramService } from "./services/deepgram-service";
+import { setupLLMService } from "./services/llm-service"
+import { setupOpenAIService } from "./services/openai";
+import { setupAnthropicService } from "./services/anthropic";
+
 
 // Application state
 let mainWindow: BrowserWindow | null = null;
@@ -102,6 +106,9 @@ function createWindow(): void {
   setupAudioCapture(mainWindow);
   setupQueueService(mainWindow);
   setupDeepgramService(mainWindow);
+  setupLLMService(mainWindow);
+  setupOpenAIService(mainWindow);
+  setupAnthropicService(mainWindow);
 }
 
 // Application initialization

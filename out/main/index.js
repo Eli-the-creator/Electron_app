@@ -13,7 +13,7 @@ const node_buffer = require("node:buffer");
 const node_util = require("node:util");
 const node_url = require("node:url");
 const node_net = require("node:net");
-require("node:fs");
+const node_fs = require("node:fs");
 require("node:path");
 let audioBuffer = [];
 let lastTranscription = null;
@@ -251,21 +251,19 @@ var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof win
 var ponyfill_es2018 = { exports: {} };
 /**
  * @license
- * web-streams-polyfill v3.3.2
+ * web-streams-polyfill v3.3.3
  * Copyright 2024 Mattias Buelens, Diwank Singh Tomer and other contributors.
  * This code is released under the MIT license.
  * SPDX-License-Identifier: MIT
  */
 var hasRequiredPonyfill_es2018;
 function requirePonyfill_es2018() {
-  if (hasRequiredPonyfill_es2018)
-    return ponyfill_es2018.exports;
+  if (hasRequiredPonyfill_es2018) return ponyfill_es2018.exports;
   hasRequiredPonyfill_es2018 = 1;
   (function(module2, exports2) {
     (function(global2, factory) {
       factory(exports2);
     })(commonjsGlobal, function(exports3) {
-      const SymbolPolyfill = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? Symbol : (description) => `Symbol(${description})`;
       function noop() {
         return void 0;
       }
@@ -279,7 +277,7 @@ function requirePonyfill_es2018() {
             value: name,
             configurable: true
           });
-        } catch (_a) {
+        } catch (_a2) {
         }
       }
       const originalPromise = Promise;
@@ -424,11 +422,11 @@ function requirePonyfill_es2018() {
           return front._elements[cursor];
         }
       }
-      const AbortSteps = SymbolPolyfill("[[AbortSteps]]");
-      const ErrorSteps = SymbolPolyfill("[[ErrorSteps]]");
-      const CancelSteps = SymbolPolyfill("[[CancelSteps]]");
-      const PullSteps = SymbolPolyfill("[[PullSteps]]");
-      const ReleaseSteps = SymbolPolyfill("[[ReleaseSteps]]");
+      const AbortSteps = Symbol("[[AbortSteps]]");
+      const ErrorSteps = Symbol("[[ErrorSteps]]");
+      const CancelSteps = Symbol("[[CancelSteps]]");
+      const PullSteps = Symbol("[[PullSteps]]");
+      const ReleaseSteps = Symbol("[[ReleaseSteps]]");
       function ReadableStreamReaderGenericInitialize(reader, stream) {
         reader._ownerReadableStream = stream;
         stream._reader = reader;
@@ -674,8 +672,8 @@ function requirePonyfill_es2018() {
       setFunctionName(ReadableStreamDefaultReader.prototype.cancel, "cancel");
       setFunctionName(ReadableStreamDefaultReader.prototype.read, "read");
       setFunctionName(ReadableStreamDefaultReader.prototype.releaseLock, "releaseLock");
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(ReadableStreamDefaultReader.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(ReadableStreamDefaultReader.prototype, Symbol.toStringTag, {
           value: "ReadableStreamDefaultReader",
           configurable: true
         });
@@ -794,9 +792,7 @@ function requirePonyfill_es2018() {
           return this._asyncIteratorImpl.return(value);
         }
       };
-      if (AsyncIteratorPrototype !== void 0) {
-        Object.setPrototypeOf(ReadableStreamAsyncIteratorPrototype, AsyncIteratorPrototype);
-      }
+      Object.setPrototypeOf(ReadableStreamAsyncIteratorPrototype, AsyncIteratorPrototype);
       function AcquireReadableStreamAsyncIterator(stream, preventCancel) {
         const reader = AcquireReadableStreamDefaultReader(stream);
         const impl = new ReadableStreamAsyncIteratorImpl(reader, preventCancel);
@@ -813,7 +809,7 @@ function requirePonyfill_es2018() {
         }
         try {
           return x2._asyncIteratorImpl instanceof ReadableStreamAsyncIteratorImpl;
-        } catch (_a) {
+        } catch (_a2) {
           return false;
         }
       }
@@ -823,6 +819,7 @@ function requirePonyfill_es2018() {
       const NumberIsNaN = Number.isNaN || function(x2) {
         return x2 !== x2;
       };
+      var _a, _b, _c;
       function CreateArrayFromList(elements) {
         return elements.slice();
       }
@@ -868,7 +865,7 @@ function requirePonyfill_es2018() {
       }
       function CreateAsyncFromSyncIterator(syncIteratorRecord) {
         const syncIterable = {
-          [SymbolPolyfill.iterator]: () => syncIteratorRecord.iterator
+          [Symbol.iterator]: () => syncIteratorRecord.iterator
         };
         const asyncIterator = async function* () {
           return yield* syncIterable;
@@ -876,17 +873,18 @@ function requirePonyfill_es2018() {
         const nextMethod = asyncIterator.next;
         return { iterator: asyncIterator, nextMethod, done: false };
       }
+      const SymbolAsyncIterator = (_c = (_a = Symbol.asyncIterator) !== null && _a !== void 0 ? _a : (_b = Symbol.for) === null || _b === void 0 ? void 0 : _b.call(Symbol, "Symbol.asyncIterator")) !== null && _c !== void 0 ? _c : "@@asyncIterator";
       function GetIterator(obj, hint = "sync", method) {
         if (method === void 0) {
           if (hint === "async") {
-            method = GetMethod(obj, SymbolPolyfill.asyncIterator);
+            method = GetMethod(obj, SymbolAsyncIterator);
             if (method === void 0) {
-              const syncMethod = GetMethod(obj, SymbolPolyfill.iterator);
+              const syncMethod = GetMethod(obj, Symbol.iterator);
               const syncIteratorRecord = GetIterator(obj, "sync", syncMethod);
               return CreateAsyncFromSyncIterator(syncIteratorRecord);
             }
           } else {
-            method = GetMethod(obj, SymbolPolyfill.iterator);
+            method = GetMethod(obj, Symbol.iterator);
           }
         }
         if (method === void 0) {
@@ -1014,8 +1012,8 @@ function requirePonyfill_es2018() {
       });
       setFunctionName(ReadableStreamBYOBRequest.prototype.respond, "respond");
       setFunctionName(ReadableStreamBYOBRequest.prototype.respondWithNewView, "respondWithNewView");
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(ReadableStreamBYOBRequest.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(ReadableStreamBYOBRequest.prototype, Symbol.toStringTag, {
           value: "ReadableStreamBYOBRequest",
           configurable: true
         });
@@ -1152,8 +1150,8 @@ function requirePonyfill_es2018() {
       setFunctionName(ReadableByteStreamController.prototype.close, "close");
       setFunctionName(ReadableByteStreamController.prototype.enqueue, "enqueue");
       setFunctionName(ReadableByteStreamController.prototype.error, "error");
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(ReadableByteStreamController.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(ReadableByteStreamController.prototype, Symbol.toStringTag, {
           value: "ReadableByteStreamController",
           configurable: true
         });
@@ -1652,9 +1650,9 @@ function requirePonyfill_es2018() {
         return mode;
       }
       function convertByobReadOptions(options, context) {
-        var _a;
+        var _a2;
         assertDictionary(options, context);
-        const min = (_a = options === null || options === void 0 ? void 0 : options.min) !== null && _a !== void 0 ? _a : 1;
+        const min = (_a2 = options === null || options === void 0 ? void 0 : options.min) !== null && _a2 !== void 0 ? _a2 : 1;
         return {
           min: convertUnsignedLongLongWithEnforceRange(min, `${context} has member 'min' that`)
         };
@@ -1800,8 +1798,8 @@ function requirePonyfill_es2018() {
       setFunctionName(ReadableStreamBYOBReader.prototype.cancel, "cancel");
       setFunctionName(ReadableStreamBYOBReader.prototype.read, "read");
       setFunctionName(ReadableStreamBYOBReader.prototype.releaseLock, "releaseLock");
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(ReadableStreamBYOBReader.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(ReadableStreamBYOBReader.prototype, Symbol.toStringTag, {
           value: "ReadableStreamBYOBReader",
           configurable: true
         });
@@ -1911,7 +1909,7 @@ function requirePonyfill_es2018() {
         }
         try {
           return typeof value.aborted === "boolean";
-        } catch (_a) {
+        } catch (_a2) {
           return false;
         }
       }
@@ -2011,8 +2009,8 @@ function requirePonyfill_es2018() {
       setFunctionName(WritableStream.prototype.abort, "abort");
       setFunctionName(WritableStream.prototype.close, "close");
       setFunctionName(WritableStream.prototype.getWriter, "getWriter");
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(WritableStream.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(WritableStream.prototype, Symbol.toStringTag, {
           value: "WritableStream",
           configurable: true
         });
@@ -2055,12 +2053,12 @@ function requirePonyfill_es2018() {
         return true;
       }
       function WritableStreamAbort(stream, reason) {
-        var _a;
+        var _a2;
         if (stream._state === "closed" || stream._state === "errored") {
           return promiseResolvedWith(void 0);
         }
         stream._writableStreamController._abortReason = reason;
-        (_a = stream._writableStreamController._abortController) === null || _a === void 0 ? void 0 : _a.abort(reason);
+        (_a2 = stream._writableStreamController._abortController) === null || _a2 === void 0 ? void 0 : _a2.abort(reason);
         const state = stream._state;
         if (state === "closed" || state === "errored") {
           return promiseResolvedWith(void 0);
@@ -2383,8 +2381,8 @@ function requirePonyfill_es2018() {
       setFunctionName(WritableStreamDefaultWriter.prototype.close, "close");
       setFunctionName(WritableStreamDefaultWriter.prototype.releaseLock, "releaseLock");
       setFunctionName(WritableStreamDefaultWriter.prototype.write, "write");
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(WritableStreamDefaultWriter.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(WritableStreamDefaultWriter.prototype, Symbol.toStringTag, {
           value: "WritableStreamDefaultWriter",
           configurable: true
         });
@@ -2534,8 +2532,8 @@ function requirePonyfill_es2018() {
         signal: { enumerable: true },
         error: { enumerable: true }
       });
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(WritableStreamDefaultController.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(WritableStreamDefaultController.prototype, Symbol.toStringTag, {
           value: "WritableStreamDefaultController",
           configurable: true
         });
@@ -2823,7 +2821,7 @@ function requirePonyfill_es2018() {
         try {
           new ctor();
           return true;
-        } catch (_a) {
+        } catch (_a2) {
           return false;
         }
       }
@@ -3084,8 +3082,8 @@ function requirePonyfill_es2018() {
       setFunctionName(ReadableStreamDefaultController.prototype.close, "close");
       setFunctionName(ReadableStreamDefaultController.prototype.enqueue, "enqueue");
       setFunctionName(ReadableStreamDefaultController.prototype.error, "error");
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(ReadableStreamDefaultController.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(ReadableStreamDefaultController.prototype, Symbol.toStringTag, {
           value: "ReadableStreamDefaultController",
           configurable: true
         });
@@ -3857,6 +3855,9 @@ function requirePonyfill_es2018() {
           const options = convertIteratorOptions(rawOptions, "First parameter");
           return AcquireReadableStreamAsyncIterator(this, options.preventCancel);
         }
+        [SymbolAsyncIterator](options) {
+          return this.values(options);
+        }
         /**
          * Creates a new ReadableStream wrapping the provided iterable or async iterable.
          *
@@ -3886,19 +3887,17 @@ function requirePonyfill_es2018() {
       setFunctionName(ReadableStream2.prototype.pipeTo, "pipeTo");
       setFunctionName(ReadableStream2.prototype.tee, "tee");
       setFunctionName(ReadableStream2.prototype.values, "values");
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(ReadableStream2.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(ReadableStream2.prototype, Symbol.toStringTag, {
           value: "ReadableStream",
           configurable: true
         });
       }
-      if (typeof SymbolPolyfill.asyncIterator === "symbol") {
-        Object.defineProperty(ReadableStream2.prototype, SymbolPolyfill.asyncIterator, {
-          value: ReadableStream2.prototype.values,
-          writable: true,
-          configurable: true
-        });
-      }
+      Object.defineProperty(ReadableStream2.prototype, SymbolAsyncIterator, {
+        value: ReadableStream2.prototype.values,
+        writable: true,
+        configurable: true
+      });
       function CreateReadableStream(startAlgorithm, pullAlgorithm, cancelAlgorithm, highWaterMark = 1, sizeAlgorithm = () => 1) {
         const stream = Object.create(ReadableStream2.prototype);
         InitializeReadableStream(stream);
@@ -4027,8 +4026,8 @@ function requirePonyfill_es2018() {
         highWaterMark: { enumerable: true },
         size: { enumerable: true }
       });
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(ByteLengthQueuingStrategy.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(ByteLengthQueuingStrategy.prototype, Symbol.toStringTag, {
           value: "ByteLengthQueuingStrategy",
           configurable: true
         });
@@ -4079,8 +4078,8 @@ function requirePonyfill_es2018() {
         highWaterMark: { enumerable: true },
         size: { enumerable: true }
       });
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(CountQueuingStrategy.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(CountQueuingStrategy.prototype, Symbol.toStringTag, {
           value: "CountQueuingStrategy",
           configurable: true
         });
@@ -4183,8 +4182,8 @@ function requirePonyfill_es2018() {
         readable: { enumerable: true },
         writable: { enumerable: true }
       });
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(TransformStream.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(TransformStream.prototype, Symbol.toStringTag, {
           value: "TransformStream",
           configurable: true
         });
@@ -4298,8 +4297,8 @@ function requirePonyfill_es2018() {
       setFunctionName(TransformStreamDefaultController.prototype.enqueue, "enqueue");
       setFunctionName(TransformStreamDefaultController.prototype.error, "error");
       setFunctionName(TransformStreamDefaultController.prototype.terminate, "terminate");
-      if (typeof SymbolPolyfill.toStringTag === "symbol") {
-        Object.defineProperty(TransformStreamDefaultController.prototype, SymbolPolyfill.toStringTag, {
+      if (typeof Symbol.toStringTag === "symbol") {
+        Object.defineProperty(TransformStreamDefaultController.prototype, Symbol.toStringTag, {
           value: "TransformStreamDefaultController",
           configurable: true
         });
@@ -4633,8 +4632,7 @@ const _Blob = class Blob {
     if (typeof options !== "object" && typeof options !== "function") {
       throw new TypeError("Failed to construct 'Blob': parameter 2 cannot convert to dictionary.");
     }
-    if (options === null)
-      options = {};
+    if (options === null) options = {};
     const encoder = new TextEncoder();
     for (const element of blobParts) {
       let part;
@@ -4784,8 +4782,7 @@ const _File = class File extends Blob2 {
       throw new TypeError(`Failed to construct 'File': 2 arguments required, but only ${arguments.length} present.`);
     }
     super(fileBits, options);
-    if (options === null)
-      options = {};
+    if (options === null) options = {};
     const lastModified = options.lastModified === void 0 ? Date.now() : Number(options.lastModified);
     if (!Number.isNaN(lastModified)) {
       this.#lastModified = lastModified;
@@ -4815,8 +4812,7 @@ var { toStringTag: t, iterator: i, hasInstance: h } = Symbol, r = Math.random, m
 const FormData = class FormData2 {
   #d = [];
   constructor(...a) {
-    if (a.length)
-      throw new TypeError(`Failed to construct 'FormData': parameter 1 is not of type 'HTMLFormElement'.`);
+    if (a.length) throw new TypeError(`Failed to construct 'FormData': parameter 1 is not of type 'HTMLFormElement'.`);
   }
   get [t]() {
     return "FormData";
@@ -4839,9 +4835,7 @@ const FormData = class FormData2 {
   get(a) {
     x("get", arguments, 1);
     a += "";
-    for (var b = this.#d, l = b.length, c = 0; c < l; c++)
-      if (b[c][0] === a)
-        return b[c][1];
+    for (var b = this.#d, l = b.length, c = 0; c < l; c++) if (b[c][0] === a) return b[c][1];
     return null;
   }
   getAll(a, b) {
@@ -4858,8 +4852,7 @@ const FormData = class FormData2 {
   }
   forEach(a, b) {
     x("forEach", arguments, 1);
-    for (var [c, d] of this)
-      a.call(b, d, c, this);
+    for (var [c, d] of this) a.call(b, d, c, this);
   }
   set(...a) {
     x("set", arguments, 2);
@@ -4875,12 +4868,10 @@ const FormData = class FormData2 {
     yield* this.#d;
   }
   *keys() {
-    for (var [a] of this)
-      yield a;
+    for (var [a] of this) yield a;
   }
   *values() {
-    for (var [, a] of this)
-      yield a;
+    for (var [, a] of this) yield a;
   }
 };
 function formDataToBlob(F, B = Blob2) {
@@ -4954,16 +4945,13 @@ class Body {
       body = null;
     } else if (isURLSearchParameters(body)) {
       body = node_buffer.Buffer.from(body.toString());
-    } else if (isBlob(body))
-      ;
-    else if (node_buffer.Buffer.isBuffer(body))
-      ;
+    } else if (isBlob(body)) ;
+    else if (node_buffer.Buffer.isBuffer(body)) ;
     else if (node_util.types.isAnyArrayBuffer(body)) {
       body = node_buffer.Buffer.from(body);
     } else if (ArrayBuffer.isView(body)) {
       body = node_buffer.Buffer.from(body.buffer, body.byteOffset, body.byteLength);
-    } else if (body instanceof Stream)
-      ;
+    } else if (body instanceof Stream) ;
     else if (body instanceof FormData) {
       body = formDataToBlob(body);
       boundary = body.type.split("=")[1];
@@ -5016,7 +5004,7 @@ class Body {
       }
       return formData;
     }
-    const { toFormData } = await Promise.resolve().then(() => require("./multipart-parser-zT7Kpd7U.js"));
+    const { toFormData } = await Promise.resolve().then(() => require("./multipart-parser-jLXd1Mvi.js"));
     return toFormData(this.body, ct);
   }
   /**
@@ -5217,8 +5205,7 @@ class Headers extends URLSearchParams {
       for (const [name, values] of Object.entries(raw)) {
         result.push(...values.map((value) => [name, value]));
       }
-    } else if (init == null)
-      ;
+    } else if (init == null) ;
     else if (typeof init === "object" && !node_util.types.isBoxedPrimitive(init)) {
       const method = init[Symbol.iterator];
       if (method == null) {
@@ -5842,6 +5829,7 @@ if (!globalThis.DOMException) {
     err.constructor.name === "DOMException" && (globalThis.DOMException = err.constructor);
   }
 }
+const { stat } = node_fs.promises;
 const supportedSchemas = /* @__PURE__ */ new Set(["data:", "http:", "https:"]);
 async function fetch(url, options_) {
   return new Promise((resolve, reject) => {
@@ -6113,7 +6101,7 @@ let config = {
   topP: 0.95,
   topK: 40
 };
-let isGenerating = false;
+let isGenerating$2 = false;
 function setupGeminiService(mainWindow2) {
   electron.ipcMain.handle("load-gemini-config", async () => {
     try {
@@ -6148,7 +6136,7 @@ function setupGeminiService(mainWindow2) {
       images,
       streaming = true
     }) => {
-      if (isGenerating) {
+      if (isGenerating$2) {
         return {
           success: false,
           error: "Генерация уже выполняется"
@@ -6161,7 +6149,7 @@ function setupGeminiService(mainWindow2) {
         };
       }
       try {
-        isGenerating = true;
+        isGenerating$2 = true;
         mainWindow2.webContents.send("generation-status", { status: "started" });
         const combinedText = texts.join("\n\n");
         const requestBody = {
@@ -6253,7 +6241,7 @@ function setupGeminiService(mainWindow2) {
             status: "completed",
             result
           });
-          isGenerating = false;
+          isGenerating$2 = false;
           return { success: true, result };
         } else {
           const response = await fetch(apiUrl, {
@@ -6278,7 +6266,7 @@ function setupGeminiService(mainWindow2) {
             status: "completed",
             result
           });
-          isGenerating = false;
+          isGenerating$2 = false;
           return { success: true, result };
         }
       } catch (error) {
@@ -6287,7 +6275,7 @@ function setupGeminiService(mainWindow2) {
           status: "error",
           error: error instanceof Error ? error.message : "Неизвестная ошибка"
         });
-        isGenerating = false;
+        isGenerating$2 = false;
         return {
           success: false,
           error: error instanceof Error ? error.message : "Неизвестная ошибка"
@@ -6296,11 +6284,11 @@ function setupGeminiService(mainWindow2) {
     }
   );
   electron.ipcMain.handle("stop-generation", () => {
-    if (!isGenerating) {
+    if (!isGenerating$2) {
       return { success: true, wasGenerating: false };
     }
     try {
-      isGenerating = false;
+      isGenerating$2 = false;
       mainWindow2.webContents.send("generation-status", { status: "stopped" });
       return { success: true, wasGenerating: true };
     } catch (error) {
@@ -6312,7 +6300,7 @@ function setupGeminiService(mainWindow2) {
     }
   });
   electron.ipcMain.handle("get-generation-status", () => {
-    return { isGenerating };
+    return { isGenerating: isGenerating$2 };
   });
 }
 let isCapturing = false;
@@ -6566,8 +6554,7 @@ function setupQueueService(mainWindow2) {
   electron.ipcMain.handle("add-screenshot-to-queue", async () => {
     try {
       const wasVisible = mainWindow2.isVisible();
-      if (wasVisible)
-        mainWindow2.hide();
+      if (wasVisible) mainWindow2.hide();
       await new Promise((resolve) => setTimeout(resolve, 200));
       const primaryDisplay = require("electron").screen.getPrimaryDisplay();
       const { width, height } = primaryDisplay.size;
@@ -6603,8 +6590,7 @@ function setupQueueService(mainWindow2) {
       };
       requestsQueue.push(queueItem);
       mainWindow2.webContents.send("queue-updated", requestsQueue);
-      if (wasVisible)
-        mainWindow2.show();
+      if (wasVisible) mainWindow2.show();
       return { success: true, item: queueItem };
     } catch (error) {
       console.error("Ошибка при создании скриншота:", error);
@@ -6742,22 +6728,22 @@ function setupQueueService(mainWindow2) {
     return false;
   }
 }
-const getConfigPath = () => {
+const getConfigPath$1 = () => {
   return path.join(electron.app.getPath("userData"), "deepgram-config.json");
 };
-const saveConfigToFile = (config2) => {
+const saveConfigToFile$1 = (config2) => {
   try {
-    fs.writeFileSync(getConfigPath(), JSON.stringify(config2, null, 2));
+    fs.writeFileSync(getConfigPath$1(), JSON.stringify(config2, null, 2));
     return true;
   } catch (error) {
     console.error("Error saving DeepGram config to file:", error);
     return false;
   }
 };
-const loadConfigFromFile = () => {
+const loadConfigFromFile$1 = () => {
   try {
-    if (fs.existsSync(getConfigPath())) {
-      const data = fs.readFileSync(getConfigPath(), "utf8");
+    if (fs.existsSync(getConfigPath$1())) {
+      const data = fs.readFileSync(getConfigPath$1(), "utf8");
       return JSON.parse(data);
     }
   } catch (error) {
@@ -6769,7 +6755,7 @@ function setupDeepgramService(mainWindow2) {
   console.log("Setting up DeepGram service...");
   electron.ipcMain.handle("load-deepgram-config", async () => {
     try {
-      const config2 = loadConfigFromFile();
+      const config2 = loadConfigFromFile$1();
       return config2 || { apiKey: "" };
     } catch (error) {
       console.error("Error loading DeepGram config:", error);
@@ -6778,7 +6764,7 @@ function setupDeepgramService(mainWindow2) {
   });
   electron.ipcMain.handle("save-deepgram-config", async (_, config2) => {
     try {
-      const success = saveConfigToFile(config2);
+      const success = saveConfigToFile$1(config2);
       if (success) {
         process.env.DEEPGRAM_API_KEY = config2.apiKey;
         return { success: true, config: config2 };
@@ -6796,12 +6782,499 @@ function setupDeepgramService(mainWindow2) {
       };
     }
   });
-  const initialConfig = loadConfigFromFile();
+  const initialConfig = loadConfigFromFile$1();
   if (initialConfig && initialConfig.apiKey) {
     process.env.DEEPGRAM_API_KEY = initialConfig.apiKey;
     console.log("DeepGram API key loaded from config");
   }
   console.log("DeepGram service setup complete");
+}
+const defaultConfigs = {
+  openai: {
+    model: "gpt-4",
+    maxTokens: 2048,
+    temperature: 0.7
+  },
+  anthropic: {
+    model: "claude-3-opus-20240229",
+    maxTokens: 2048,
+    temperature: 0.7
+  },
+  gemini: {
+    model: "gemini-pro",
+    maxTokens: 2048,
+    temperature: 0.7
+  }
+};
+const modelOptions = {
+  openai: ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"],
+  anthropic: ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
+  gemini: ["gemini-pro", "gemini-pro-vision"]
+};
+const getConfigPath = () => {
+  return path.join(electron.app.getPath("userData"), "llm-config.json");
+};
+const saveConfigToFile = (config2) => {
+  try {
+    fs.writeFileSync(getConfigPath(), JSON.stringify(config2, null, 2));
+    return true;
+  } catch (error) {
+    console.error("Error saving LLM config to file:", error);
+    return false;
+  }
+};
+const loadConfigFromFile = () => {
+  try {
+    if (fs.existsSync(getConfigPath())) {
+      const data = fs.readFileSync(getConfigPath(), "utf8");
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error("Error loading LLM config from file:", error);
+  }
+  return null;
+};
+function setupLLMService(mainWindow2) {
+  console.log("Setting up LLM service...");
+  electron.ipcMain.handle("load-llm-config", async () => {
+    try {
+      const config2 = loadConfigFromFile();
+      if (!config2) {
+        return {
+          provider: "gemini",
+          // Default provider
+          apiKey: "",
+          ...defaultConfigs.gemini
+        };
+      }
+      return config2;
+    } catch (error) {
+      console.error("Error loading LLM config:", error);
+      return {
+        provider: "gemini",
+        apiKey: "",
+        ...defaultConfigs.gemini
+      };
+    }
+  });
+  electron.ipcMain.handle("save-llm-config", async (_, config2) => {
+    try {
+      const success = saveConfigToFile(config2);
+      if (success) {
+        if (config2.provider === "gemini") {
+          process.env.GEMINI_API_KEY = config2.apiKey;
+        } else if (config2.provider === "openai") {
+          process.env.OPENAI_API_KEY = config2.apiKey;
+        } else if (config2.provider === "anthropic") {
+          process.env.ANTHROPIC_API_KEY = config2.apiKey;
+        }
+        return { success: true, config: config2 };
+      } else {
+        return {
+          success: false,
+          error: "Failed to save LLM configuration"
+        };
+      }
+    } catch (error) {
+      console.error("Error saving LLM config:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  });
+  electron.ipcMain.handle("get-llm-provider-defaults", async (_, provider) => {
+    return defaultConfigs[provider] || defaultConfigs.gemini;
+  });
+  electron.ipcMain.handle("get-llm-model-options", async (_, provider) => {
+    return modelOptions[provider] || [];
+  });
+  const initialConfig = loadConfigFromFile();
+  if (initialConfig) {
+    if (initialConfig.provider === "gemini") {
+      process.env.GEMINI_API_KEY = initialConfig.apiKey;
+    } else if (initialConfig.provider === "openai") {
+      process.env.OPENAI_API_KEY = initialConfig.apiKey;
+    } else if (initialConfig.provider === "anthropic") {
+      process.env.ANTHROPIC_API_KEY = initialConfig.apiKey;
+    }
+    console.log(`LLM API key loaded from config for provider: ${initialConfig.provider}`);
+  }
+  console.log("LLM service setup complete");
+}
+let isGenerating$1 = false;
+function setupOpenAIService(mainWindow2) {
+  console.log("Setting up OpenAI service...");
+  electron.ipcMain.handle(
+    "generate-openai-response",
+    async (_, {
+      texts,
+      images,
+      streaming = true
+    }) => {
+      if (isGenerating$1) {
+        return {
+          success: false,
+          error: "Generation already in progress"
+        };
+      }
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        return {
+          success: false,
+          error: "OpenAI API key not configured"
+        };
+      }
+      try {
+        isGenerating$1 = true;
+        mainWindow2.webContents.send("generation-status", { status: "started" });
+        const combinedText = texts.join("\n\n");
+        const useVision = images && images.length > 0;
+        const apiUrl = useVision ? "https://api.openai.com/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
+        let model = process.env.OPENAI_MODEL || "gpt-4";
+        const maxTokens = parseInt(process.env.OPENAI_MAX_TOKENS || "2048");
+        const temperature = parseFloat(process.env.OPENAI_TEMPERATURE || "0.7");
+        if (useVision && !model.includes("vision")) {
+          model = "gpt-4-vision-preview";
+        }
+        const messages = [];
+        messages.push({
+          role: "system",
+          content: "You are a helpful voice assistant. Respond concisely and clearly."
+        });
+        const userMessageContent = [];
+        if (combinedText) {
+          userMessageContent.push({
+            type: "text",
+            text: combinedText
+          });
+        }
+        if (useVision && images && images.length > 0) {
+          for (const imagePath of images) {
+            try {
+              const imageBuffer = fs.readFileSync(imagePath);
+              const base64Image = imageBuffer.toString("base64");
+              userMessageContent.push({
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${base64Image}`
+                }
+              });
+            } catch (imageError) {
+              console.error(`Error reading image ${imagePath}:`, imageError);
+            }
+          }
+        }
+        messages.push({
+          role: "user",
+          content: userMessageContent
+        });
+        const requestBody = {
+          model,
+          messages,
+          max_tokens: maxTokens,
+          temperature,
+          stream: streaming
+        };
+        if (streaming) {
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(requestBody)
+          });
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+          }
+          if (!response.body) {
+            throw new Error("Response body is empty");
+          }
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let result = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              break;
+            }
+            const chunk = decoder.decode(value, { stream: true });
+            try {
+              const lines = chunk.split("\n").filter((line) => line.trim() && line.startsWith("data:"));
+              for (const line of lines) {
+                try {
+                  const jsonString = line.substring(5).trim();
+                  if (jsonString === "[DONE]") {
+                    continue;
+                  }
+                  const data = JSON.parse(jsonString);
+                  if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
+                    const textChunk = data.choices[0].delta.content;
+                    result += textChunk;
+                    mainWindow2.webContents.send("generation-chunk", {
+                      chunk: textChunk
+                    });
+                  }
+                } catch (parseError) {
+                  console.error("Error parsing JSON in stream:", parseError);
+                }
+              }
+            } catch (chunkError) {
+              console.error("Error processing chunk:", chunkError);
+            }
+          }
+          mainWindow2.webContents.send("generation-status", {
+            status: "completed",
+            result
+          });
+          isGenerating$1 = false;
+          return { success: true, result };
+        } else {
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(requestBody)
+          });
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+          }
+          const data = await response.json();
+          let result = "";
+          if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+            result = data.choices[0].message.content;
+          }
+          mainWindow2.webContents.send("generation-status", {
+            status: "completed",
+            result
+          });
+          isGenerating$1 = false;
+          return { success: true, result };
+        }
+      } catch (error) {
+        console.error("OpenAI generation error:", error);
+        mainWindow2.webContents.send("generation-status", {
+          status: "error",
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+        isGenerating$1 = false;
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error"
+        };
+      }
+    }
+  );
+  electron.ipcMain.handle("stop-openai-generation", () => {
+    if (!isGenerating$1) {
+      return { success: true, wasGenerating: false };
+    }
+    try {
+      isGenerating$1 = false;
+      mainWindow2.webContents.send("generation-status", { status: "stopped" });
+      return { success: true, wasGenerating: true };
+    } catch (error) {
+      console.error("Error stopping OpenAI generation:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  });
+  console.log("OpenAI service setup complete");
+}
+let isGenerating = false;
+function setupAnthropicService(mainWindow2) {
+  console.log("Setting up Anthropic (Claude) service...");
+  electron.ipcMain.handle(
+    "generate-anthropic-response",
+    async (_, {
+      texts,
+      images,
+      streaming = true
+    }) => {
+      if (isGenerating) {
+        return {
+          success: false,
+          error: "Generation already in progress"
+        };
+      }
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        return {
+          success: false,
+          error: "Anthropic API key not configured"
+        };
+      }
+      try {
+        isGenerating = true;
+        mainWindow2.webContents.send("generation-status", { status: "started" });
+        const combinedText = texts.join("\n\n");
+        const apiUrl = "https://api.anthropic.com/v1/messages";
+        const model = process.env.ANTHROPIC_MODEL || "claude-3-opus-20240229";
+        const maxTokens = parseInt(process.env.ANTHROPIC_MAX_TOKENS || "2048");
+        const temperature = parseFloat(process.env.ANTHROPIC_TEMPERATURE || "0.7");
+        const messages = [];
+        let userContent = [];
+        if (combinedText) {
+          userContent.push({
+            type: "text",
+            text: combinedText
+          });
+        }
+        if (images && images.length > 0) {
+          for (const imagePath of images) {
+            try {
+              const imageBuffer = fs.readFileSync(imagePath);
+              const base64Image = imageBuffer.toString("base64");
+              const mimeType = imagePath.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+              userContent.push({
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mimeType,
+                  data: base64Image
+                }
+              });
+            } catch (imageError) {
+              console.error(`Error reading image ${imagePath}:`, imageError);
+            }
+          }
+        }
+        const requestBody = {
+          model,
+          messages: [
+            {
+              role: "user",
+              content: userContent
+            }
+          ],
+          max_tokens: maxTokens,
+          temperature,
+          stream: streaming
+        };
+        if (streaming) {
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": apiKey,
+              "anthropic-version": "2023-06-01"
+            },
+            body: JSON.stringify(requestBody)
+          });
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Anthropic API error: ${response.status} ${errorText}`);
+          }
+          if (!response.body) {
+            throw new Error("Response body is empty");
+          }
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let result = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              break;
+            }
+            const chunk = decoder.decode(value, { stream: true });
+            try {
+              const events = chunk.split("\n\n").filter(Boolean);
+              for (const event of events) {
+                try {
+                  const lines = event.split("\n");
+                  const dataLine = lines.find((line) => line.startsWith("data:"));
+                  if (!dataLine) continue;
+                  const jsonString = dataLine.substring(5).trim();
+                  if (jsonString === "[DONE]") {
+                    continue;
+                  }
+                  const data = JSON.parse(jsonString);
+                  if (data.type === "content_block_delta" && data.delta && data.delta.text) {
+                    const textChunk = data.delta.text;
+                    result += textChunk;
+                    mainWindow2.webContents.send("generation-chunk", {
+                      chunk: textChunk
+                    });
+                  }
+                } catch (parseError) {
+                  console.error("Error parsing JSON in stream:", parseError);
+                }
+              }
+            } catch (chunkError) {
+              console.error("Error processing chunk:", chunkError);
+            }
+          }
+          mainWindow2.webContents.send("generation-status", {
+            status: "completed",
+            result
+          });
+          isGenerating = false;
+          return { success: true, result };
+        } else {
+          requestBody.stream = false;
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": apiKey,
+              "anthropic-version": "2023-06-01"
+            },
+            body: JSON.stringify(requestBody)
+          });
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Anthropic API error: ${response.status} ${errorText}`);
+          }
+          const data = await response.json();
+          let result = "";
+          if (data.content && data.content.length > 0) {
+            result = data.content.filter((block) => block.type === "text").map((block) => block.text).join("");
+          }
+          mainWindow2.webContents.send("generation-status", {
+            status: "completed",
+            result
+          });
+          isGenerating = false;
+          return { success: true, result };
+        }
+      } catch (error) {
+        console.error("Anthropic generation error:", error);
+        mainWindow2.webContents.send("generation-status", {
+          status: "error",
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+        isGenerating = false;
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error"
+        };
+      }
+    }
+  );
+  electron.ipcMain.handle("stop-anthropic-generation", () => {
+    if (!isGenerating) {
+      return { success: true, wasGenerating: false };
+    }
+    try {
+      isGenerating = false;
+      mainWindow2.webContents.send("generation-status", { status: "stopped" });
+      return { success: true, wasGenerating: true };
+    } catch (error) {
+      console.error("Error stopping Anthropic generation:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  });
+  console.log("Anthropic service setup complete");
 }
 let mainWindow = null;
 let isVisible = true;
@@ -6862,6 +7335,9 @@ function createWindow() {
   setupAudioCapture(mainWindow);
   setupQueueService(mainWindow);
   setupDeepgramService();
+  setupLLMService();
+  setupOpenAIService(mainWindow);
+  setupAnthropicService(mainWindow);
 }
 electron.app.whenReady().then(() => {
   if (process.platform === "darwin") {
@@ -6909,8 +7385,7 @@ electron.app.whenReady().then(() => {
     }
   });
   electron.app.on("activate", function() {
-    if (electron.BrowserWindow.getAllWindows().length === 0)
-      createWindow();
+    if (electron.BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 electron.app.on("window-all-closed", () => {
