@@ -1,3 +1,4 @@
+// src/renderer/src/hooks/useTranscription.ts с обновлениями
 import { useState, useEffect, useCallback, useRef } from "react";
 
 interface TranscriptionResult {
@@ -21,6 +22,8 @@ export function useTranscription() {
   const [error, setError] = useState<string | null>(null);
   const [isListeningForTranscription, setIsListeningForTranscription] =
     useState(false);
+  const [transcriptionLanguage, setTranscriptionLanguage] =
+    useState<string>("en");
 
   // Use refs for internal state that shouldn't trigger re-renders
   const transcriptionIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -28,9 +31,83 @@ export function useTranscription() {
   const lastTranscriptionTextRef = useRef<string | null>(null);
   const continuousTranscriptionActiveRef = useRef<boolean>(false);
 
+  // Загрузка языка из настроек аудио
+  useEffect(() => {
+    const loadAudioSettings = async () => {
+      try {
+        const status = await window.api.audio.getCaptureStatus();
+        if (status && status.settings && status.settings.language) {
+          setTranscriptionLanguage(status.settings.language);
+          console.log(
+            `Loaded transcription language from settings: ${status.settings.language}`
+          );
+        }
+      } catch (err) {
+        console.error("Error loading audio settings:", err);
+      }
+    };
+
+    loadAudioSettings();
+  }, []);
+
   // Function to transcribe current audio buffer with DeepGram
+  // const transcribeBuffer = useCallback(
+  //   async (language?: string) => {
+  //     // Use provided language or fall back to the one from settings
+  //     const langToUse = language || transcriptionLanguage;
+
+  //     // Don't start a new transcription if one is already in progress
+  //     if (pendingTranscriptionRef.current) {
+  //       console.log("Transcription already in progress, skipping new request");
+  //       return null;
+  //     }
+
+  //     try {
+  //       console.log(
+  //         `Transcribing buffer with DeepGram API (language: ${langToUse})`
+  //       );
+  //       pendingTranscriptionRef.current = true;
+  //       setTranscriptionStatus({ status: "processing" });
+
+  //       const result = await window.api.whisper.transcribeBuffer({
+  //         language: langToUse,
+  //       });
+
+  //       if (result) {
+  //         console.log(`DeepGram transcription successful: "${result.text}"`);
+
+  //         // Only update state if text is actually different to avoid unnecessary renders
+  //         if (result.text !== lastTranscriptionTextRef.current) {
+  //           lastTranscriptionTextRef.current = result.text;
+  //           setLastTranscription(result);
+  //         }
+
+  //         setTranscriptionStatus({ status: "ready" });
+  //         pendingTranscriptionRef.current = false;
+  //         return result;
+  //       } else {
+  //         console.log("No transcription result returned from DeepGram");
+  //         setTranscriptionStatus({ status: "ready" });
+  //         pendingTranscriptionRef.current = false;
+  //         return null;
+  //       }
+  //     } catch (err) {
+  //       const errorMessage = `Error transcribing buffer with DeepGram: ${err instanceof Error ? err.message : String(err)}`;
+  //       console.error(errorMessage, err);
+  //       setError(errorMessage);
+  //       setTranscriptionStatus({
+  //         status: "error",
+  //         message: errorMessage,
+  //       });
+  //       pendingTranscriptionRef.current = false;
+  //       return null;
+  //     }
+  //   },
+  //   [transcriptionLanguage]
+  // );
+
   const transcribeBuffer = useCallback(
-    async (language: "ru" | "en" | "pl" = "en") => {
+    async (language?: string) => {
       // Don't start a new transcription if one is already in progress
       if (pendingTranscriptionRef.current) {
         console.log("Transcription already in progress, skipping new request");
@@ -38,13 +115,17 @@ export function useTranscription() {
       }
 
       try {
+        // Если язык явно указан, используем его, иначе не передаем параметр вообще
+        const options = language ? { language } : {};
+
         console.log(
-          `Transcribing buffer with DeepGram API (language: ${language})`
+          `Transcribing buffer with DeepGram API${language ? ` (language: ${language})` : " (using settings)"}`
         );
         pendingTranscriptionRef.current = true;
         setTranscriptionStatus({ status: "processing" });
 
-        const result = await window.api.whisper.transcribeBuffer({ language });
+        // Передаем options без явного указания language, если его не было в аргументах
+        const result = await window.api.whisper.transcribeBuffer(options);
 
         if (result) {
           console.log(`DeepGram transcription successful: "${result.text}"`);
@@ -76,14 +157,17 @@ export function useTranscription() {
         return null;
       }
     },
-    []
+    [transcriptionLanguage]
   );
 
   // Function to start continuous transcription
   const startContinuousTranscription = useCallback(
-    (intervalMs = 2000, language: "ru" | "en" | "pl" = "en") => {
+    (intervalMs = 2000, language?: string) => {
+      // Use provided language or fall back to the one from settings
+      const langToUse = language || transcriptionLanguage;
+
       console.log(
-        `Starting continuous transcription with DeepGram: ${intervalMs}ms interval in ${language} language`
+        `Starting continuous transcription with DeepGram: ${intervalMs}ms interval in ${langToUse} language`
       );
 
       // If a transcription interval is already running, stop it
@@ -122,7 +206,7 @@ export function useTranscription() {
         }
       };
     },
-    [transcribeBuffer]
+    [transcriptionLanguage]
   );
 
   // Function to stop continuous transcription and process results with DeepGram
@@ -215,5 +299,7 @@ export function useTranscription() {
     startContinuousTranscription,
     stopContinuousTranscription,
     setLastTranscription, // Export setLastTranscription for use in App.tsx
+    transcriptionLanguage, // Export language for use elsewhere
+    setTranscriptionLanguage, // Allow explicit setting of language
   };
 }

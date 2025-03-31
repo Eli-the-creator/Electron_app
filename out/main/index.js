@@ -15,6 +15,135 @@ const node_url = require("node:url");
 const node_net = require("node:net");
 const node_fs = require("node:fs");
 require("node:path");
+let isCapturing = false;
+let captureSettings = {
+  captureMicrophone: true,
+  captureSystemAudio: true,
+  sampleRate: 16e3,
+  // Optimal for speech recognition
+  channels: 1,
+  // Mono for better speech recognition
+  language: "en"
+  // Default language is English
+};
+function setupAudioCapture(mainWindow2) {
+  console.log("Setting up audio capture service with FFmpeg support...");
+  const sendCaptureSettings = () => {
+    mainWindow2.webContents.send("audio-capture-settings", captureSettings);
+    console.log("Sent audio capture settings to renderer", captureSettings);
+  };
+  electron.ipcMain.handle("initialize-audio-capture", async () => {
+    try {
+      console.log("Initializing audio capture...");
+      const tempDir = path.join(electron.app.getPath("temp"), "deepgram_audio");
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      sendCaptureSettings();
+      return { success: true };
+    } catch (error) {
+      console.error("Error initializing audio capture:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  });
+  electron.ipcMain.handle(
+    "update-audio-settings",
+    (_, newSettings) => {
+      console.log("Updating audio settings", newSettings);
+      captureSettings = {
+        ...captureSettings,
+        ...newSettings
+      };
+      sendCaptureSettings();
+      return captureSettings;
+    }
+  );
+  electron.ipcMain.handle("start-audio-capture", async (_, sourceId) => {
+    console.log("Received request to start audio capture", {
+      sourceId,
+      isAlreadyCapturing: isCapturing
+    });
+    if (isCapturing) {
+      return { success: true, alreadyCapturing: true };
+    }
+    try {
+      clearAudioBuffer();
+      mainWindow2.webContents.send("start-capture", {
+        sourceId,
+        settings: captureSettings
+      });
+      isCapturing = true;
+      console.log("Audio capture started successfully");
+      return { success: true };
+    } catch (error) {
+      console.error("Error starting audio capture:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  });
+  electron.ipcMain.handle("stop-audio-capture", () => {
+    console.log("Received request to stop audio capture", {
+      isCurrentlyCapturing: isCapturing
+    });
+    if (!isCapturing) {
+      return { success: true, notCapturing: true };
+    }
+    try {
+      mainWindow2.webContents.send("stop-capture");
+      isCapturing = false;
+      console.log("Audio capture stopped successfully");
+      return { success: true };
+    } catch (error) {
+      console.error("Error stopping audio capture:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  });
+  electron.ipcMain.handle("get-capture-status", () => {
+    console.log("Getting capture status", {
+      isCapturing,
+      settings: captureSettings
+    });
+    return {
+      isCapturing,
+      settings: captureSettings
+    };
+  });
+  electron.ipcMain.on("audio-data", (_, audioData) => {
+    if (!isCapturing) {
+      console.log("Received audio data but not capturing, ignoring");
+      return;
+    }
+    mainWindow2.webContents.send("process-audio-data", audioData);
+    console.log(`Received and forwarded audio data: ${audioData.length} bytes`);
+    addToAudioBuffer(audioData);
+  });
+  electron.ipcMain.handle("save-debug-audio", (_, audioData) => {
+    try {
+      const debugFilePath = path.join(electron.app.getPath("temp"), "debug_audio.wav");
+      fs.writeFileSync(debugFilePath, audioData);
+      console.log(`Saved debug audio to ${debugFilePath}`);
+      return { success: true, path: debugFilePath };
+    } catch (error) {
+      console.error("Error saving debug audio:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  });
+  console.log("Audio capture service setup complete");
+}
+function getAudioCaptureSettings() {
+  return { ...captureSettings };
+}
 let audioBuffer = [];
 let lastTranscription = null;
 const BUFFER_DURATION_MS = 5e3;
@@ -39,32 +168,13 @@ function initializeDeepgramClient() {
     return null;
   }
 }
-function createDummyTranscription(language) {
-  const now = Date.now();
-  const bufferSize = audioBuffer.length;
-  const totalBytes = audioBuffer.reduce(
-    (acc, item) => acc + item.data.length,
-    0
-  );
-  const text = bufferSize > 0 ? `Audio recording received (${bufferSize} fragments, ${totalBytes} bytes). DeepGram API not configured.` : `Audio recording is empty. Check microphone settings. DeepGram API not configured.`;
-  return {
-    text,
-    timestamp: now,
-    language
-  };
-}
 async function transcribeAudioWithDeepgram(audioPath, language = "en") {
   try {
     logDeepgram(
       `Transcribing audio with DeepGram: ${audioPath} (language: ${language})`
     );
-    const apiKey = process.env.DEEPGRAM_API_KEY || "";
-    if (!apiKey) {
-      logDeepgram(
-        "No DeepGram API key found, please configure it in settings."
-      );
-      return createDummyTranscription(language);
-    }
+    const apiKey = process.env.DEEPGRAM_API_KEY || "d0b70c87fd1a89db7417aa434dc4c378835bc033";
+    if (!apiKey) ;
     const deepgram = sdk.createClient(apiKey);
     const audioFile = fs.readFileSync(audioPath);
     const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
@@ -98,6 +208,20 @@ async function transcribeAudioWithDeepgram(audioPath, language = "en") {
     logDeepgram(`Error in transcribeAudioWithDeepgram: ${error}`);
     return createDummyTranscription(language);
   }
+}
+function createDummyTranscription(language) {
+  const now = Date.now();
+  const bufferSize = audioBuffer.length;
+  const totalBytes = audioBuffer.reduce(
+    (acc, item) => acc + item.data.length,
+    0
+  );
+  const text = bufferSize > 0 ? `Audio recording received (${bufferSize} fragments, ${totalBytes} bytes). DeepGram API not configured.` : `Audio recording is empty. Check microphone settings. DeepGram API not configured.`;
+  return {
+    text,
+    timestamp: now,
+    language
+  };
 }
 function addToAudioBuffer(audioData) {
   const now = Date.now();
@@ -148,7 +272,7 @@ function setupWhisperService(mainWindow2) {
   initializeDeepgramClient();
   electron.ipcMain.handle(
     "transcribe-buffer",
-    async (_, options) => {
+    async (_, options = {}) => {
       logDeepgram(
         `Received transcribe-buffer request with options: ${JSON.stringify(options)}`
       );
@@ -176,7 +300,17 @@ function setupWhisperService(mainWindow2) {
         if (!fs.existsSync(tempAudioPath)) {
           throw new Error(`Failed to write audio file to ${tempAudioPath}`);
         }
-        const language = options.language || "en";
+        let language = options.language;
+        if (!language) {
+          const audioSettings = getAudioCaptureSettings();
+          if (audioSettings && audioSettings.language) {
+            language = audioSettings.language;
+            logDeepgram(`Using language from capture settings: ${language}`);
+          } else {
+            language = "en";
+            logDeepgram(`No language in settings, using default: ${language}`);
+          }
+        }
         const result = await transcribeAudioWithDeepgram(
           tempAudioPath,
           language
@@ -190,7 +324,18 @@ function setupWhisperService(mainWindow2) {
         return result;
       } catch (err) {
         logDeepgram(`Error transcribing buffer: ${err}`);
-        const dummy = createDummyTranscription(options.language || "en");
+        let language = options.language || "en";
+        if (!options.language) {
+          try {
+            const audioSettings = getAudioCaptureSettings();
+            if (audioSettings && audioSettings.language) {
+              language = audioSettings.language;
+            }
+          } catch (settingsErr) {
+            logDeepgram(`Error getting audio settings: ${settingsErr}`);
+          }
+        }
+        const dummy = createDummyTranscription(language);
         mainWindow2.webContents.send("transcription-result", dummy);
         return dummy;
       }
@@ -6302,130 +6447,6 @@ function setupGeminiService(mainWindow2) {
   electron.ipcMain.handle("get-generation-status", () => {
     return { isGenerating: isGenerating$2 };
   });
-}
-let isCapturing = false;
-let captureSettings = {
-  captureMicrophone: true,
-  captureSystemAudio: true,
-  sampleRate: 16e3,
-  // Optimal for speech recognition
-  channels: 1
-  // Mono for better speech recognition
-};
-function setupAudioCapture(mainWindow2) {
-  console.log("Setting up audio capture service with FFmpeg support...");
-  const sendCaptureSettings = () => {
-    mainWindow2.webContents.send("audio-capture-settings", captureSettings);
-    console.log("Sent audio capture settings to renderer", captureSettings);
-  };
-  electron.ipcMain.handle("initialize-audio-capture", async () => {
-    try {
-      console.log("Initializing audio capture...");
-      const tempDir = path.join(electron.app.getPath("temp"), "deepgram_audio");
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
-      sendCaptureSettings();
-      return { success: true };
-    } catch (error) {
-      console.error("Error initializing audio capture:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error"
-      };
-    }
-  });
-  electron.ipcMain.handle(
-    "update-audio-settings",
-    (_, newSettings) => {
-      console.log("Updating audio settings", newSettings);
-      captureSettings = {
-        ...captureSettings,
-        ...newSettings
-      };
-      sendCaptureSettings();
-      return captureSettings;
-    }
-  );
-  electron.ipcMain.handle("start-audio-capture", async (_, sourceId) => {
-    console.log("Received request to start audio capture", {
-      sourceId,
-      isAlreadyCapturing: isCapturing
-    });
-    if (isCapturing) {
-      return { success: true, alreadyCapturing: true };
-    }
-    try {
-      clearAudioBuffer();
-      mainWindow2.webContents.send("start-capture", {
-        sourceId,
-        settings: captureSettings
-      });
-      isCapturing = true;
-      console.log("Audio capture started successfully");
-      return { success: true };
-    } catch (error) {
-      console.error("Error starting audio capture:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error"
-      };
-    }
-  });
-  electron.ipcMain.handle("stop-audio-capture", () => {
-    console.log("Received request to stop audio capture", {
-      isCurrentlyCapturing: isCapturing
-    });
-    if (!isCapturing) {
-      return { success: true, notCapturing: true };
-    }
-    try {
-      mainWindow2.webContents.send("stop-capture");
-      isCapturing = false;
-      console.log("Audio capture stopped successfully");
-      return { success: true };
-    } catch (error) {
-      console.error("Error stopping audio capture:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error"
-      };
-    }
-  });
-  electron.ipcMain.handle("get-capture-status", () => {
-    console.log("Getting capture status", {
-      isCapturing,
-      settings: captureSettings
-    });
-    return {
-      isCapturing,
-      settings: captureSettings
-    };
-  });
-  electron.ipcMain.on("audio-data", (_, audioData) => {
-    if (!isCapturing) {
-      console.log("Received audio data but not capturing, ignoring");
-      return;
-    }
-    mainWindow2.webContents.send("process-audio-data", audioData);
-    console.log(`Received and forwarded audio data: ${audioData.length} bytes`);
-    addToAudioBuffer(audioData);
-  });
-  electron.ipcMain.handle("save-debug-audio", (_, audioData) => {
-    try {
-      const debugFilePath = path.join(electron.app.getPath("temp"), "debug_audio.wav");
-      fs.writeFileSync(debugFilePath, audioData);
-      console.log(`Saved debug audio to ${debugFilePath}`);
-      return { success: true, path: debugFilePath };
-    } catch (error) {
-      console.error("Error saving debug audio:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error"
-      };
-    }
-  });
-  console.log("Audio capture service setup complete");
 }
 const HOTKEYS = {
   TOGGLE_CAPTURE: "CommandOrControl+I",

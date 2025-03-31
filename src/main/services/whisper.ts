@@ -6,6 +6,7 @@ import path from "path";
 import fs from "fs";
 import { createClient } from "@deepgram/sdk";
 // import { loadConfigFromFile } from "./deepgram-service";
+import { getAudioCaptureSettings } from "./audio-capture";
 
 // Определяем интерфейс для результатов транскрипции
 interface TranscriptionResult {
@@ -50,33 +51,102 @@ function initializeDeepgramClient() {
 }
 
 // Create a dummy transcription for debugging or when DeepGram API is not available
-function createDummyTranscription(
-  language: "ru" | "en" | "pl"
-): TranscriptionResult {
-  const now = Date.now();
+// function createDummyTranscription(
+//   language: "ru" | "en" | "pl"
+// ): TranscriptionResult {
+//   const now = Date.now();
 
-  // Generate a dummy message based on the buffer size to make debugging easier
-  const bufferSize = audioBuffer.length;
-  const totalBytes = audioBuffer.reduce(
-    (acc, item) => acc + item.data.length,
-    0
-  );
+//   // Generate a dummy message based on the buffer size to make debugging easier
+//   const bufferSize = audioBuffer.length;
+//   const totalBytes = audioBuffer.reduce(
+//     (acc, item) => acc + item.data.length,
+//     0
+//   );
 
-  const text =
-    bufferSize > 0
-      ? `Audio recording received (${bufferSize} fragments, ${totalBytes} bytes). DeepGram API not configured.`
-      : `Audio recording is empty. Check microphone settings. DeepGram API not configured.`;
+//   const text =
+//     bufferSize > 0
+//       ? `Audio recording received (${bufferSize} fragments, ${totalBytes} bytes). DeepGram API not configured.`
+//       : `Audio recording is empty. Check microphone settings. DeepGram API not configured.`;
 
-  return {
-    text,
-    timestamp: now,
-    language,
-  };
-}
+//   return {
+//     text,
+//     timestamp: now,
+//     language,
+//   };
+// }
+
+// async function transcribeAudioWithDeepgram(
+//   audioPath: string,
+//   language: "ru" | "en" | "pl" = "en"
+// ): Promise<TranscriptionResult | null> {
+//   try {
+//     logDeepgram(
+//       `Transcribing audio with DeepGram: ${audioPath} (language: ${language})`
+//     );
+
+//     // Загрузим конфигурацию
+//     // const config = loadConfigFromFile();
+//     const apiKey = process.env.DEEPGRAM_API_KEY || "";
+
+//     if (!apiKey) {
+//       logDeepgram(
+//         "No DeepGram API key found, please configure it in settings."
+//       );
+//       return createDummyTranscription(language);
+//     }
+
+//     // Создаем клиент DeepGram
+//     const deepgram = createClient(apiKey);
+
+//     // Читаем аудио файл
+//     const audioFile = fs.readFileSync(audioPath);
+
+//     // Отправляем запрос, используя метод из вашего рабочего примера
+//     const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
+//       audioFile,
+//       {
+//         model: "nova-2",
+//         language: language, // использование выбранного языка
+//         smart_format: true,
+//         punctuate: true,
+//       }
+//     );
+
+//     // Проверяем на ошибки
+//     if (error) {
+//       logDeepgram(`DeepGram API error: ${error}`);
+//       return createDummyTranscription(language);
+//     }
+
+//     // Извлекаем транскрипцию из результата
+//     const transcript =
+//       result?.results?.channels[0]?.alternatives[0]?.transcript;
+
+//     if (!transcript) {
+//       logDeepgram("No transcription available in DeepGram response");
+//       return createDummyTranscription(language);
+//     }
+
+//     logDeepgram(`Transcription result: "${transcript}"`);
+
+//     // Создаем и возвращаем результат транскрипции
+//     const transcriptionResult: TranscriptionResult = {
+//       text: transcript,
+//       timestamp: Date.now(),
+//       language,
+//     };
+
+//     lastTranscription = transcriptionResult;
+//     return transcriptionResult;
+//   } catch (error) {
+//     logDeepgram(`Error in transcribeAudioWithDeepgram: ${error}`);
+//     return createDummyTranscription(language);
+//   }
+// }
 
 async function transcribeAudioWithDeepgram(
   audioPath: string,
-  language: "ru" | "en" | "pl" = "en"
+  language: string = "en"
 ): Promise<TranscriptionResult | null> {
   try {
     logDeepgram(
@@ -84,8 +154,9 @@ async function transcribeAudioWithDeepgram(
     );
 
     // Загрузим конфигурацию
-    // const config = loadConfigFromFile();
-    const apiKey = process.env.DEEPGRAM_API_KEY || "";
+    const apiKey =
+      process.env.DEEPGRAM_API_KEY ||
+      "d0b70c87fd1a89db7417aa434dc4c378835bc033";
 
     if (!apiKey) {
       logDeepgram(
@@ -141,6 +212,29 @@ async function transcribeAudioWithDeepgram(
     logDeepgram(`Error in transcribeAudioWithDeepgram: ${error}`);
     return createDummyTranscription(language);
   }
+}
+
+// А также в функции createDummyTranscription:
+function createDummyTranscription(language: string): TranscriptionResult {
+  const now = Date.now();
+
+  // Generate a dummy message based on the buffer size to make debugging easier
+  const bufferSize = audioBuffer.length;
+  const totalBytes = audioBuffer.reduce(
+    (acc, item) => acc + item.data.length,
+    0
+  );
+
+  const text =
+    bufferSize > 0
+      ? `Audio recording received (${bufferSize} fragments, ${totalBytes} bytes). DeepGram API not configured.`
+      : `Audio recording is empty. Check microphone settings. DeepGram API not configured.`;
+
+  return {
+    text,
+    timestamp: now,
+    language,
+  };
 }
 
 // Add audio data to buffer with improved handling and logging
@@ -216,9 +310,93 @@ export function setupWhisperService(mainWindow: BrowserWindow): void {
   initializeDeepgramClient();
 
   // Обработчик для транскрипции буфера аудио
+  // ipcMain.handle(
+  //   "transcribe-buffer",
+  //   async (_, options: { language?: string } = {}) => {
+  //     logDeepgram(
+  //       `Received transcribe-buffer request with options: ${JSON.stringify(options)}`
+  //     );
+
+  //     // Проверяем, есть ли данные для транскрипции
+  //     if (audioBuffer.length === 0) {
+  //       logDeepgram("Audio buffer is empty, returning dummy transcription");
+  //       const dummyTranscription = createDummyTranscription(
+  //         options.language || "en"
+  //       );
+  //       mainWindow.webContents.send("transcription-result", dummyTranscription);
+  //       return dummyTranscription;
+  //     }
+
+  //     try {
+  //       // Объединяем все фрагменты аудио в один буфер
+  //       const combinedBuffer = Buffer.concat(
+  //         audioBuffer.map((item) => item.data)
+  //       );
+  //       logDeepgram(
+  //         `Combined buffer size: ${combinedBuffer.length} bytes from ${audioBuffer.length} chunks`
+  //       );
+
+  //       // Создаем временный файл для аудио
+  //       const tempAudioPath = join(
+  //         tempDir,
+  //         `audio_to_transcribe_${Date.now()}.wav`
+  //       );
+
+  //       // Сохраняем аудио во временный файл
+  //       logDeepgram(`Saving audio to: ${tempAudioPath}`);
+  //       writeFileSync(tempAudioPath, combinedBuffer);
+
+  //       // Проверяем, успешно ли создан файл
+  //       if (!existsSync(tempAudioPath)) {
+  //         throw new Error(`Failed to write audio file to ${tempAudioPath}`);
+  //       }
+
+  //       // Транскрибируем аудио с помощью DeepGram
+  //       // Получаем язык из переданных опций или из состояния захвата аудио
+  //       let language = options.language;
+
+  //       // Если язык не задан явно в опциях, проверяем captureSettings
+  //       if (!language && captureSettings && captureSettings.language) {
+  //         language = captureSettings.language;
+  //         logDeepgram(`Using language from capture settings: ${language}`);
+  //       } else if (!language) {
+  //         // Если язык по-прежнему не определен, используем английский по умолчанию
+  //         language = "en";
+  //         logDeepgram(`No language specified, using default: ${language}`);
+  //       }
+
+  //       const result = await transcribeAudioWithDeepgram(
+  //         tempAudioPath,
+  //         language
+  //       );
+
+  //       // Отправляем результат в рендерер
+  //       if (result) {
+  //         logDeepgram(`Sending transcription result to UI: "${result.text}"`);
+  //         mainWindow.webContents.send("transcription-result", result);
+  //       } else {
+  //         logDeepgram("No transcription result to send to UI");
+  //       }
+
+  //       return result;
+  //     } catch (err) {
+  //       logDeepgram(`Error transcribing buffer: ${err}`);
+
+  //       // Возвращаем запасной вариант при ошибке
+  //       const language =
+  //         options.language ||
+  //         (captureSettings && captureSettings.language) ||
+  //         "en";
+  //       const dummy = createDummyTranscription(language);
+  //       mainWindow.webContents.send("transcription-result", dummy);
+  //       return dummy;
+  //     }
+  //   }
+  // );
+
   ipcMain.handle(
     "transcribe-buffer",
-    async (_, options: { language?: "ru" | "en" | "pl" }) => {
+    async (_, options: { language?: string } = {}) => {
       logDeepgram(
         `Received transcribe-buffer request with options: ${JSON.stringify(options)}`
       );
@@ -258,7 +436,23 @@ export function setupWhisperService(mainWindow: BrowserWindow): void {
         }
 
         // Транскрибируем аудио с помощью DeepGram
-        const language = options.language || "en";
+        // Получаем язык из переданных опций или из настроек аудио
+        let language = options.language;
+
+        // Если язык не задан явно в опциях, получаем из настроек
+        if (!language) {
+          // Используем функцию для получения текущих настроек
+          const audioSettings = getAudioCaptureSettings();
+          if (audioSettings && audioSettings.language) {
+            language = audioSettings.language;
+            logDeepgram(`Using language from capture settings: ${language}`);
+          } else {
+            // Если язык по-прежнему не определен, используем английский по умолчанию
+            language = "en";
+            logDeepgram(`No language in settings, using default: ${language}`);
+          }
+        }
+
         const result = await transcribeAudioWithDeepgram(
           tempAudioPath,
           language
@@ -277,7 +471,21 @@ export function setupWhisperService(mainWindow: BrowserWindow): void {
         logDeepgram(`Error transcribing buffer: ${err}`);
 
         // Возвращаем запасной вариант при ошибке
-        const dummy = createDummyTranscription(options.language || "en");
+        let language = options.language || "en";
+
+        // Если язык не задан явно, попробуем получить из настроек
+        if (!options.language) {
+          try {
+            const audioSettings = getAudioCaptureSettings();
+            if (audioSettings && audioSettings.language) {
+              language = audioSettings.language;
+            }
+          } catch (settingsErr) {
+            logDeepgram(`Error getting audio settings: ${settingsErr}`);
+          }
+        }
+
+        const dummy = createDummyTranscription(language);
         mainWindow.webContents.send("transcription-result", dummy);
         return dummy;
       }

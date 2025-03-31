@@ -139,6 +139,9 @@ const App: React.FC = () => {
 
     try {
       // STATE 1: Currently not capturing or transcribing - we need to start
+      // Исправление для STATE 1 в функции toggleCaptureAndTranscription
+
+      // STATE 1: Currently not capturing or transcribing - we need to start
       if (!isCapturing && !isTranscribing) {
         debugLog("App", "Starting audio capture for DeepGram transcription");
 
@@ -163,7 +166,8 @@ const App: React.FC = () => {
               // Start a lightweight continuous transcription system
               // This doesn't actually transcribe during recording, just monitors
               setTimeout(() => {
-                startContinuousTranscription(2000, "en");
+                // КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Не передаём язык, используем значение из настроек
+                startContinuousTranscription(2000); // Убираем второй аргумент
                 debugLog("App", "DeepGram monitoring started");
                 isTogglingRef.current = false;
               }, 1000);
@@ -190,7 +194,8 @@ const App: React.FC = () => {
           // Now do the actual DeepGram transcription of the entire recording
           debugLog("App", "Sending audio to DeepGram for transcription");
 
-          transcribeBuffer("en") // Or language of choice
+          // КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: НЕ передаём язык явно - используем значение из настроек
+          transcribeBuffer() // Удаляем параметр языка, позволяя функции использовать настройки
             .then((finalResult) => {
               debugLog(
                 "App",
@@ -309,18 +314,18 @@ const App: React.FC = () => {
 
   const handleSendToLLM = async () => {
     if (queue.length === 0 || isGenerating) return;
-  
+
     // Получаем текущую конфигурацию LLM
     try {
       const llmConfig = await window.api.llm.loadConfig();
       const texts = queue
         .filter((item) => item.type === "text")
         .map((item) => item.content);
-  
+
       const images = queue
         .filter((item) => item.type === "image")
         .map((item) => item.content);
-  
+
       // В зависимости от провайдера, используем разные API
       if (llmConfig.provider === "gemini") {
         // Используем существующий Gemini API
@@ -328,18 +333,19 @@ const App: React.FC = () => {
       } else {
         // Временная заглушка для других провайдеров, пока не реализованы их интеграции
         // В финальной версии здесь должны быть вызовы к соответствующим API
-        console.log(`Using ${llmConfig.provider} with model ${llmConfig.model}`);
-        
+        console.log(
+          `Using ${llmConfig.provider} with model ${llmConfig.model}`
+        );
+
         // Пока просто используем Gemini API для всех провайдеров
         await generateResponse({ texts, images, streaming: true });
       }
-  
+
       setActivePanel("response");
     } catch (error) {
       console.error("Error sending to LLM:", error);
     }
   };
-  
 
   // Register hotkey handlers
   useHotkeys({
