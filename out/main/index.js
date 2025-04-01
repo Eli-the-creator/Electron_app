@@ -313,47 +313,6 @@ function clearAudioBuffer() {
 function getLastTranscription() {
   return lastTranscription;
 }
-function cleanupTempFiles() {
-  try {
-    logDeepgram("Cleaning up temporary audio files...");
-    if (!fs.existsSync(TEMP_DIR)) {
-      logDeepgram(`Temp directory doesn't exist: ${TEMP_DIR}`);
-      return true;
-    }
-    let files;
-    try {
-      files = fs.readdirSync(TEMP_DIR);
-      logDeepgram(`Found ${files.length} files in temp directory`);
-    } catch (readError) {
-      logDeepgram(`Error reading temp directory: ${readError}`);
-      return false;
-    }
-    let success = true;
-    let deletedCount = 0;
-    let failedCount = 0;
-    files.forEach((file) => {
-      if (file.startsWith("audio_to_transcribe_") && file.endsWith(".wav")) {
-        const filePath = path.join(TEMP_DIR, file);
-        try {
-          logDeepgram(`Deleting file: ${file}`);
-          fs.unlinkSync(filePath);
-          deletedCount++;
-        } catch (deleteError) {
-          logDeepgram(`Error deleting file ${file}: ${deleteError}`);
-          failedCount++;
-          success = false;
-        }
-      }
-    });
-    logDeepgram(
-      `Cleanup complete: ${deletedCount} files deleted, ${failedCount} failed`
-    );
-    return success;
-  } catch (error) {
-    logDeepgram(`Error during temp file cleanup: ${error}`);
-    return false;
-  }
-}
 function setupWhisperService(mainWindow2) {
   logDeepgram("Setting up DeepGram transcription service");
   if (!fs.existsSync(TEMP_DIR)) {
@@ -448,14 +407,6 @@ function setupWhisperService(mainWindow2) {
   });
   electron.ipcMain.on("add-audio-data", (_, audioData) => {
     addToAudioBuffer(audioData);
-  });
-  electron.ipcMain.handle("cleanup-audio-files", () => {
-    logDeepgram("Received cleanup request for audio files");
-    const success = cleanupTempFiles();
-    return {
-      success,
-      message: success ? "Temporary audio files cleaned up successfully" : "Error cleaning up some temporary files"
-    };
   });
   mainWindow2.webContents.send("whisper-status", {
     status: "ready",
@@ -6681,33 +6632,42 @@ function setupQueueService(mainWindow2) {
   });
   electron.ipcMain.handle("add-screenshot-to-queue", async () => {
     try {
-      const wasVisible = mainWindow2.isVisible();
-      if (wasVisible) mainWindow2.hide();
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 300));
       const primaryDisplay = require("electron").screen.getPrimaryDisplay();
       const { width, height } = primaryDisplay.size;
-      const captureWindow = new electron.BrowserWindow({
-        width,
-        height,
-        show: false,
-        frame: false,
-        transparent: true,
-        skipTaskbar: true,
-        alwaysOnTop: false
+      console.log(`Capturing screenshot of size ${width}x${height}`);
+      const sources = await require("electron").desktopCapturer.getSources({
+        types: ["screen"],
+        thumbnailSize: { width, height }
       });
-      const screenshot = await captureWindow.webContents.capturePage({
-        x: 0,
-        y: 0,
-        width,
-        height
-      });
-      captureWindow.close();
+      const mainSource = sources.find(
+        (source) => source.name === "Entire Screen" || source.name === "Screen 1" || source.id.includes("screen")
+      );
+      if (!mainSource || !mainSource.thumbnail) {
+        throw new Error("Failed to capture screen source");
+      }
+      const screenshot = mainSource.thumbnail;
+      if (!screenshot || screenshot.isEmpty()) {
+        throw new Error("Captured screenshot is empty");
+      }
+      const pngData = screenshot.toPNG();
+      console.log(`Screenshot PNG size: ${pngData.length} bytes`);
+      if (pngData.length === 0) {
+        throw new Error("Screenshot PNG data is empty");
+      }
       const screenshotId = Date.now();
       const screenshotPath = path.join(
         tempDir,
         `screenshot-${screenshotId}.png`
       );
-      fs.writeFileSync(screenshotPath, screenshot.toPNG());
+      fs.writeFileSync(screenshotPath, pngData);
+      const stats = fs.statSync(screenshotPath);
+      console.log(`Saved screenshot file with size: ${stats.size} bytes`);
+      if (stats.size === 0) {
+        throw new Error(
+          `Failed to write screenshot data to file: ${screenshotPath}`
+        );
+      }
       const id = `image-${screenshotId}`;
       const queueItem = {
         id,
@@ -6721,10 +6681,11 @@ function setupQueueService(mainWindow2) {
       if (wasVisible) mainWindow2.show();
       return { success: true, item: queueItem };
     } catch (error) {
-      console.error("Ошибка при создании скриншота:", error);
+      console.error("Error creating screenshot:", error);
+      if (wasVisible) mainWindow2.show();
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Неизвестная ошибка"
+        error: error instanceof Error ? error.message : "Unknown error"
       };
     }
   });
@@ -7052,6 +7013,52 @@ const BASE_SYSTEM_PROMPT = `Ты помощник, отвечающий на в�
 - Используй > для цитат или выделения важной информации
 
 Отвечай кратко и по существу.`;
+function processImageSync(imagePath) {
+  try {
+    if (!fs.existsSync(imagePath)) {
+      console.error(`File does not exist: ${imagePath}`);
+      return null;
+    }
+    const stats = fs.statSync(imagePath);
+    console.log(
+      `Image file stats: ${JSON.stringify({
+        size: stats.size,
+        isFile: stats.isFile(),
+        path: imagePath
+      })}`
+    );
+    if (!stats.isFile()) {
+      throw new Error(`Not a file: ${imagePath}`);
+    }
+    if (stats.size === 0) {
+      throw new Error(`Empty file: ${imagePath}`);
+    }
+    const buffer = fs.readFileSync(imagePath);
+    console.log(`Read buffer length: ${buffer.length} bytes`);
+    if (!buffer || buffer.length === 0) {
+      throw new Error(`Read buffer is empty for file: ${imagePath}`);
+    }
+    const ext = path.extname(imagePath).toLowerCase();
+    const mimeType = ext === ".png" ? "image/png" : ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : ext === ".gif" ? "image/gif" : "application/octet-stream";
+    console.log(`Using MIME type: ${mimeType} for extension: ${ext}`);
+    const base64 = buffer.toString("base64");
+    console.log(`Base64 string length: ${base64 ? base64.length : 0} chars`);
+    if (!base64 || base64.length === 0) {
+      throw new Error(
+        `Base64 conversion produced empty string for file: ${imagePath}`
+      );
+    }
+    return {
+      type: "image_url",
+      image_url: {
+        url: `data:${mimeType};base64,${base64}`
+      }
+    };
+  } catch (error) {
+    console.error(`Failed to process image ${imagePath}:`, error);
+    return null;
+  }
+}
 function setupOpenAIService(mainWindow2) {
   console.log("Setting up OpenAI service...");
   electron.ipcMain.handle(
@@ -7083,7 +7090,7 @@ function setupOpenAIService(mainWindow2) {
         let model = process.env.OPENAI_MODEL || "gpt-4";
         const maxTokens = parseInt(process.env.OPENAI_MAX_TOKENS || "2048");
         const temperature = parseFloat(process.env.OPENAI_TEMPERATURE || "0.7");
-        if (useVision && !model.includes("vision")) {
+        if (useVision) {
           model = "gpt-4-turbo";
         }
         const messages = [];
@@ -7102,27 +7109,20 @@ function setupOpenAIService(mainWindow2) {
               text: combinedText
             });
           }
-          const mimeTypes = {
-            ".jpg": "image/jpeg",
-            ".jpeg": "image/jpeg",
-            ".png": "image/png",
-            ".gif": "image/gif"
-          };
-          if (useVision && images && images.length > 0) {
+          if (images && images.length > 0) {
+            console.log(`Processing ${images.length} images`);
             for (const imagePath of images) {
-              try {
-                const imageBuffer = fs.readFileSync(imagePath);
-                const ext = path.extname(imagePath).toLowerCase();
-                const mimeType = mimeTypes[ext] || "application/octet-stream";
-                const base64Image = imageBuffer.toString("base64");
-                userMessageContent.push({
-                  type: "image_url",
-                  image_url: {
-                    url: `data:${mimeType};base64,${base64Image}`
-                  }
-                });
-              } catch (imageError) {
-                console.error(`Error reading image ${imagePath}:`, imageError);
+              console.log(`Processing image: ${imagePath}`);
+              const imageContent = processImageSync(imagePath);
+              if (imageContent) {
+                userMessageContent.push(imageContent);
+                console.log(
+                  `Successfully added image to request: ${path.basename(imagePath)}`
+                );
+              } else {
+                console.warn(
+                  `Skipping image ${imagePath} due to processing error`
+                );
               }
             }
           }
@@ -7138,6 +7138,15 @@ function setupOpenAIService(mainWindow2) {
           temperature,
           stream: streaming
         };
+        console.log("Sending request to OpenAI API:", {
+          model,
+          useVision,
+          hasImages: images?.length > 0,
+          textLength: combinedText?.length || 0,
+          imageCount: useVision ? images.length : 0,
+          contentType: typeof userMessageContent === "string" ? "text" : "mixed",
+          messagesLength: messages.length
+        });
         if (streaming) {
           const response = await fetch(apiUrl, {
             method: "POST",

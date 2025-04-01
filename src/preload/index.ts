@@ -417,7 +417,7 @@ const api = {
     getLastTranscription: () => ipcRenderer.invoke("get-last-transcription"),
 
     // Clean up temporary audio files
-    cleanupAudioFiles: () => ipcRenderer.invoke("cleanup-audio-files"),
+    // cleanupAudioFiles: () => ipcRenderer.invoke("cleanup-audio-files"),
 
     // Handler for receiving transcription results
     onTranscriptionResult: (callback: (result: any) => void) => {

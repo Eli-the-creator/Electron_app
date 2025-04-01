@@ -306,21 +306,21 @@ export function useTranscription() {
     };
   }, [stopContinuousTranscription]);
 
-  const cleanupAudioFiles = useCallback(async () => {
-    try {
-      await window.api.whisper.cleanupAudioFiles();
-      debugLog(
-        "useTranscription",
-        "Successfully cleaned up temporary audio files"
-      );
-      return true;
-    } catch (err) {
-      const errorMessage = `Error cleaning up audio files: ${err instanceof Error ? err.message : String(err)}`;
-      setError(errorMessage);
-      debugLog("useTranscription", errorMessage);
-      return false;
-    }
-  }, []);
+  // const cleanupAudioFiles = useCallback(async () => {
+  //   try {
+  //     await window.api.whisper.cleanupAudioFiles();
+  //     debugLog(
+  //       "useTranscription",
+  //       "Successfully cleaned up temporary audio files"
+  //     );
+  //     return true;
+  //   } catch (err) {
+  //     const errorMessage = `Error cleaning up audio files: ${err instanceof Error ? err.message : String(err)}`;
+  //     setError(errorMessage);
+  //     debugLog("useTranscription", errorMessage);
+  //     return false;
+  //   }
+  // }, []);
 
   return {
     lastTranscription,
@@ -332,6 +332,5 @@ export function useTranscription() {
     setLastTranscription, // Export setLastTranscription for use in App.tsx
     transcriptionLanguage, // Export language for use elsewhere
     setTranscriptionLanguage, // Allow explicit setting of language
-    cleanupAudioFiles,
   };
 }

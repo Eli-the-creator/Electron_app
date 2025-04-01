@@ -80,7 +80,7 @@ const api = {
     // Get last transcription
     getLastTranscription: () => electron.ipcRenderer.invoke("get-last-transcription"),
     // Clean up temporary audio files
-    cleanupAudioFiles: () => electron.ipcRenderer.invoke("cleanup-audio-files"),
+    // cleanupAudioFiles: () => ipcRenderer.invoke("cleanup-audio-files"),
     // Handler for receiving transcription results
     onTranscriptionResult: (callback) => {
       const handler = (_, result) => callback(result);

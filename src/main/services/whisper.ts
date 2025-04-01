@@ -482,16 +482,16 @@ export function setupWhisperService(mainWindow: BrowserWindow): void {
   });
 
   // Handler to cleanup temporary files
-  ipcMain.handle("cleanup-audio-files", () => {
-    logDeepgram("Received cleanup request for audio files");
-    const success = cleanupTempFiles();
-    return {
-      success,
-      message: success
-        ? "Temporary audio files cleaned up successfully"
-        : "Error cleaning up some temporary files",
-    };
-  });
+  // ipcMain.handle("cleanup-audio-files", () => {
+  //   logDeepgram("Received cleanup request for audio files");
+  //   const success = cleanupTempFiles();
+  //   return {
+  //     success,
+  //     message: success
+  //       ? "Temporary audio files cleaned up successfully"
+  //       : "Error cleaning up some temporary files",
+  //   };
+  // });
 
   // Notify that service is ready
   mainWindow.webContents.send("whisper-status", {
