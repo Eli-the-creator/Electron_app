@@ -157,13 +157,8 @@ function logDeepgram(message, ...args) {
 }
 function initializeDeepgramClient() {
   try {
-    const apiKey = process.env.DEEPGRAM_API_KEY || "";
-    if (!apiKey) {
-      logDeepgram(
-        "No DeepGram API key provided. Please configure it in the settings."
-      );
-      return null;
-    }
+    const apiKey = process.env.DEEPGRAM_API_KEY || "61c6085076948c01a838b2c69f31d1dedd2778b7";
+    if (!apiKey) ;
     deepgramClient = sdk.createClient(apiKey);
     logDeepgram("DeepGram client initialized successfully");
     return deepgramClient;
