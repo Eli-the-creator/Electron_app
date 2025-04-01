@@ -17,10 +17,9 @@ import { setupAudioCapture } from "./services/audio-capture";
 import { registerHotkeys } from "./services/hotkeys";
 import { setupQueueService } from "./services/queue";
 import { setupDeepgramService } from "./services/deepgram-service";
-import { setupLLMService } from "./services/llm-service"
+import { setupLLMService } from "./services/llm-service";
 import { setupOpenAIService } from "./services/openai";
 import { setupAnthropicService } from "./services/anthropic";
-
 
 // Application state
 let mainWindow: BrowserWindow | null = null;
@@ -34,7 +33,7 @@ function createWindow(): void {
   // Create main window with settings that make it resistant to screen capture
   mainWindow = new BrowserWindow({
     width: 660,
-    height: 320,
+    height: 680,
     x: width - 720,
     y: height - 650,
     show: false,

@@ -2,26 +2,47 @@
 import { BrowserWindow, ipcMain } from "electron";
 import fetch from "node-fetch";
 import { readFileSync } from "fs";
-import path from "path";
-import { app } from "electron";
 import FormData from "form-data";
+import { extname } from "path";
 
-// Конфигурация OpenAI API
+// OpenAI API configuration
 interface OpenAIConfig {
-  apiKey: string; 
+  apiKey: string;
   model: string;
   maxTokens: number;
   temperature: number;
 }
 
-// Состояние генерации
+// Generation state
 let isGenerating = false;
 
-// Настройка сервиса OpenAI
+export const BASE_SYSTEM_PROMPT = `Ты помощник, отвечающий на вопросы.
+
+Если вопрос теоретический, твой ответ должен содержать:
+1. Краткий ответ (1-2 предложения)
+2. Углубленное объяснение с деталями
+3. Примеры, если они уместны
+4. Код, если он требуется для иллюстрации
+
+Если вопрос связан с алгоритмами или программированием, твой ответ должен содержать:
+1. Логическое объяснение решения
+2. Код решения с комментариями
+3. Анализ сложности (O-нотация)
+
+Используй форматирование Markdown для лучшей читаемости:
+- Используй ## для заголовков разделов
+- Используй \`\`\` для блоков кода с указанием языка
+- Используй **жирный** для важных концепций
+- Используй маркированные списки для перечислений
+- Используй > для цитат или выделения важной информации
+
+Отвечай кратко и по существу.`;
+
+// Setup OpenAI service
 export function setupOpenAIService(mainWindow: BrowserWindow): void {
   console.log("Setting up OpenAI service...");
 
-  // Обработчик для генерации ответа с помощью API OpenAI
+  // Handler for generating response with OpenAI API
   ipcMain.handle(
     "generate-openai-response",
     async (
@@ -43,7 +64,7 @@ export function setupOpenAIService(mainWindow: BrowserWindow): void {
         };
       }
 
-      // Получаем API ключ и настройки из LLM сервиса
+      // Get API key and settings from LLM service
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) {
         return {
@@ -56,135 +77,155 @@ export function setupOpenAIService(mainWindow: BrowserWindow): void {
         isGenerating = true;
         mainWindow.webContents.send("generation-status", { status: "started" });
 
-        // Объединяем тексты в один с разделителем
+        // Combine texts with separator
         const combinedText = texts.join("\n\n");
 
-        // Определяем, используем ли мы vision модель
+        // Determine if we use vision model
         const useVision = images && images.length > 0;
-        const apiUrl = useVision 
-          ? "https://api.openai.com/v1/chat/completions"
-          : "https://api.openai.com/v1/chat/completions";
+        const apiUrl = "https://api.openai.com/v1/chat/completions";
 
-        // Получаем настройки модели из конфигурации
+        // Get model settings from configuration
         let model = process.env.OPENAI_MODEL || "gpt-4";
         const maxTokens = parseInt(process.env.OPENAI_MAX_TOKENS || "2048");
         const temperature = parseFloat(process.env.OPENAI_TEMPERATURE || "0.7");
 
-        // Если есть изображения, используем модель с поддержкой vision
+        // Use vision model if there are images
         if (useVision && !model.includes("vision")) {
-          model = "gpt-4-vision-preview";
+          model = "gpt-4-turbo";
         }
 
-        // Создаем массив сообщений для API
+        // Create message array for API
         const messages = [];
-        
-        // Добавляем системное сообщение
+
+        // Add system message
         messages.push({
           role: "system",
-          content: "You are a helpful voice assistant. Respond concisely and clearly."
+          content: BASE_SYSTEM_PROMPT,
         });
 
-        // Создаем содержимое сообщения пользователя
-        const userMessageContent = [];
-        
-        // Добавляем текст
-        if (combinedText) {
-          userMessageContent.push({
-            type: "text",
-            text: combinedText
-          });
+        // Create user message content
+        let userMessageContent;
+
+        // For standard ChatGPT models without vision
+        if (!useVision) {
+          userMessageContent = combinedText;
         }
-        
-        // Добавляем изображения, если они есть
-        if (useVision && images && images.length > 0) {
-          for (const imagePath of images) {
-            try {
-              const imageBuffer = readFileSync(imagePath);
-              const base64Image = imageBuffer.toString("base64");
-              
-              userMessageContent.push({
-                type: "image_url",
-                image_url: {
-                  url: `data:image/jpeg;base64,${base64Image}`
-                }
-              });
-            } catch (imageError) {
-              console.error(`Error reading image ${imagePath}:`, imageError);
+        // For vision models
+        else {
+          userMessageContent = [];
+
+          // Add text
+          if (combinedText) {
+            userMessageContent.push({
+              type: "text",
+              text: combinedText,
+            });
+          }
+
+          const mimeTypes = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif",
+          };
+
+          // Add images if available
+          if (useVision && images && images.length > 0) {
+            for (const imagePath of images) {
+              try {
+                const imageBuffer = readFileSync(imagePath);
+                const ext = extname(imagePath).toLowerCase();
+                const mimeType = mimeTypes[ext] || "application/octet-stream";
+
+                const base64Image = imageBuffer.toString("base64");
+
+                userMessageContent.push({
+                  type: "image_url",
+                  image_url: {
+                    url: `data:${mimeType};base64,${base64Image}`,
+                  },
+                });
+              } catch (imageError) {
+                console.error(`Error reading image ${imagePath}:`, imageError);
+              }
             }
           }
         }
-        
-        // Добавляем сообщение пользователя
+
+        // Add user message
         messages.push({
           role: "user",
-          content: userMessageContent
+          content: userMessageContent,
         });
 
-        // Создаем тело запроса
+        // Create request body
         const requestBody = {
           model: model,
           messages: messages,
           max_tokens: maxTokens,
           temperature: temperature,
-          stream: streaming
+          stream: streaming,
         };
 
         if (streaming) {
-          // Стриминг ответа
+          // Stream response
           const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${apiKey}`
+              Authorization: `Bearer ${apiKey}`,
             },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify(requestBody),
           });
 
           if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+            throw new Error(
+              `OpenAI API error: ${response.status} ${errorText}`
+            );
           }
 
-          if (!response.body) {
+          // Node-fetch doesn't provide the same ReadableStream as browser fetch
+          // So we need to process the response as a Node.js stream
+          const stream = response.body;
+          if (!stream) {
             throw new Error("Response body is empty");
           }
 
-          // Создаем reader для обработки потока
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
           let result = "";
+          const decoder = new TextDecoder();
 
-          // Чтение и обработка потока
-          while (true) {
-            const { done, value } = await reader.read();
-
-            if (done) {
-              break;
-            }
-
-            // Декодируем и парсим чанк ответа
-            const chunk = decoder.decode(value, { stream: true });
+          // Set up stream processing with proper error handling
+          stream.on("data", (chunk) => {
             try {
-              // OpenAI возвращает каждый чанк в формате "data: {JSON}\n\n"
-              const lines = chunk.split("\n").filter(line => line.trim() && line.startsWith("data:"));
+              const chunkText = decoder.decode(chunk, { stream: true });
+              // OpenAI sends each chunk in format "data: {JSON}\n\n"
+              const lines = chunkText
+                .split("\n")
+                .filter((line) => line.trim() && line.startsWith("data:"));
 
               for (const line of lines) {
                 try {
-                  // Удаляем "data: " из начала строки
+                  // Remove "data: " from the start of the line
                   const jsonString = line.substring(5).trim();
-                  
-                  // Проверяем, не получили ли мы [DONE]
+
+                  // Check for [DONE] signaling the end of the stream
                   if (jsonString === "[DONE]") {
                     continue;
                   }
 
                   const data = JSON.parse(jsonString);
 
-                  if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
+                  if (
+                    data.choices &&
+                    data.choices[0] &&
+                    data.choices[0].delta &&
+                    data.choices[0].delta.content
+                  ) {
                     const textChunk = data.choices[0].delta.content;
                     result += textChunk;
 
-                    // Отправляем чанк в рендерер
+                    // Send chunk to renderer
                     mainWindow.webContents.send("generation-chunk", {
                       chunk: textChunk,
                     });
@@ -196,36 +237,58 @@ export function setupOpenAIService(mainWindow: BrowserWindow): void {
             } catch (chunkError) {
               console.error("Error processing chunk:", chunkError);
             }
-          }
-
-          // Завершаем генерацию
-          mainWindow.webContents.send("generation-status", {
-            status: "completed",
-            result,
           });
 
-          isGenerating = false;
-          return { success: true, result };
+          // Handle stream end event
+          stream.on("end", () => {
+            // Complete generation
+            mainWindow.webContents.send("generation-status", {
+              status: "completed",
+              result,
+            });
+
+            isGenerating = false;
+          });
+
+          // Handle stream error event
+          stream.on("error", (error) => {
+            console.error("Stream error:", error);
+            mainWindow.webContents.send("generation-status", {
+              status: "error",
+              error: error.message || "Unknown stream error",
+            });
+            isGenerating = false;
+          });
+
+          // Return early with success status since we're handling results via events
+          return { success: true, streaming: true };
         } else {
-          // Обычный запрос (не стриминг)
+          // Non-streaming request
           const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${apiKey}`
+              Authorization: `Bearer ${apiKey}`,
             },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify(requestBody),
           });
 
           if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+            throw new Error(
+              `OpenAI API error: ${response.status} ${errorText}`
+            );
           }
 
           const data = await response.json();
 
           let result = "";
-          if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+          if (
+            data.choices &&
+            data.choices[0] &&
+            data.choices[0].message &&
+            data.choices[0].message.content
+          ) {
             result = data.choices[0].message.content;
           }
 
@@ -254,15 +317,15 @@ export function setupOpenAIService(mainWindow: BrowserWindow): void {
     }
   );
 
-  // Прерывание текущей генерации
+  // Handler for stopping generation
   ipcMain.handle("stop-openai-generation", () => {
     if (!isGenerating) {
       return { success: true, wasGenerating: false };
     }
 
     try {
-      // OpenAI API не поддерживает остановку запроса напрямую
-      // Мы просто устанавливаем флаг состояния
+      // OpenAI API doesn't support direct interruption
+      // We just set the flag to stop
       isGenerating = false;
       mainWindow.webContents.send("generation-status", { status: "stopped" });
 
@@ -279,7 +342,7 @@ export function setupOpenAIService(mainWindow: BrowserWindow): void {
   console.log("OpenAI service setup complete");
 }
 
-// Получение состояния генерации
+// Get generation state
 export function isOpenAIGenerating(): boolean {
   return isGenerating;
 }

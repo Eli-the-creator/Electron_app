@@ -7031,6 +7031,27 @@ function setupLLMService(mainWindow2) {
   console.log("LLM service setup complete");
 }
 let isGenerating$1 = false;
+const BASE_SYSTEM_PROMPT = `Ты помощник, отвечающий на вопросы.
+
+Если вопрос теоретический, твой ответ должен содержать:
+1. Краткий ответ (1-2 предложения)
+2. Углубленное объяснение с деталями
+3. Примеры, если они уместны
+4. Код, если он требуется для иллюстрации
+
+Если вопрос связан с алгоритмами или программированием, твой ответ должен содержать:
+1. Логическое объяснение решения
+2. Код решения с комментариями
+3. Анализ сложности (O-нотация)
+
+Используй форматирование Markdown для лучшей читаемости:
+- Используй ## для заголовков разделов
+- Используй \`\`\` для блоков кода с указанием языка
+- Используй **жирный** для важных концепций
+- Используй маркированные списки для перечислений
+- Используй > для цитат или выделения важной информации
+
+Отвечай кратко и по существу.`;
 function setupOpenAIService(mainWindow2) {
   console.log("Setting up OpenAI service...");
   electron.ipcMain.handle(
@@ -7058,38 +7079,51 @@ function setupOpenAIService(mainWindow2) {
         mainWindow2.webContents.send("generation-status", { status: "started" });
         const combinedText = texts.join("\n\n");
         const useVision = images && images.length > 0;
-        const apiUrl = useVision ? "https://api.openai.com/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
+        const apiUrl = "https://api.openai.com/v1/chat/completions";
         let model = process.env.OPENAI_MODEL || "gpt-4";
         const maxTokens = parseInt(process.env.OPENAI_MAX_TOKENS || "2048");
         const temperature = parseFloat(process.env.OPENAI_TEMPERATURE || "0.7");
         if (useVision && !model.includes("vision")) {
-          model = "gpt-4-vision-preview";
+          model = "gpt-4-turbo";
         }
         const messages = [];
         messages.push({
           role: "system",
-          content: "You are a helpful voice assistant. Respond concisely and clearly."
+          content: BASE_SYSTEM_PROMPT
         });
-        const userMessageContent = [];
-        if (combinedText) {
-          userMessageContent.push({
-            type: "text",
-            text: combinedText
-          });
-        }
-        if (useVision && images && images.length > 0) {
-          for (const imagePath of images) {
-            try {
-              const imageBuffer = fs.readFileSync(imagePath);
-              const base64Image = imageBuffer.toString("base64");
-              userMessageContent.push({
-                type: "image_url",
-                image_url: {
-                  url: `data:image/jpeg;base64,${base64Image}`
-                }
-              });
-            } catch (imageError) {
-              console.error(`Error reading image ${imagePath}:`, imageError);
+        let userMessageContent;
+        if (!useVision) {
+          userMessageContent = combinedText;
+        } else {
+          userMessageContent = [];
+          if (combinedText) {
+            userMessageContent.push({
+              type: "text",
+              text: combinedText
+            });
+          }
+          const mimeTypes = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif"
+          };
+          if (useVision && images && images.length > 0) {
+            for (const imagePath of images) {
+              try {
+                const imageBuffer = fs.readFileSync(imagePath);
+                const ext = path.extname(imagePath).toLowerCase();
+                const mimeType = mimeTypes[ext] || "application/octet-stream";
+                const base64Image = imageBuffer.toString("base64");
+                userMessageContent.push({
+                  type: "image_url",
+                  image_url: {
+                    url: `data:${mimeType};base64,${base64Image}`
+                  }
+                });
+              } catch (imageError) {
+                console.error(`Error reading image ${imagePath}:`, imageError);
+              }
             }
           }
         }
@@ -7109,28 +7143,26 @@ function setupOpenAIService(mainWindow2) {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${apiKey}`
+              Authorization: `Bearer ${apiKey}`
             },
             body: JSON.stringify(requestBody)
           });
           if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+            throw new Error(
+              `OpenAI API error: ${response.status} ${errorText}`
+            );
           }
-          if (!response.body) {
+          const stream = response.body;
+          if (!stream) {
             throw new Error("Response body is empty");
           }
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
           let result = "";
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-              break;
-            }
-            const chunk = decoder.decode(value, { stream: true });
+          const decoder = new TextDecoder();
+          stream.on("data", (chunk) => {
             try {
-              const lines = chunk.split("\n").filter((line) => line.trim() && line.startsWith("data:"));
+              const chunkText = decoder.decode(chunk, { stream: true });
+              const lines = chunkText.split("\n").filter((line) => line.trim() && line.startsWith("data:"));
               for (const line of lines) {
                 try {
                   const jsonString = line.substring(5).trim();
@@ -7152,25 +7184,37 @@ function setupOpenAIService(mainWindow2) {
             } catch (chunkError) {
               console.error("Error processing chunk:", chunkError);
             }
-          }
-          mainWindow2.webContents.send("generation-status", {
-            status: "completed",
-            result
           });
-          isGenerating$1 = false;
-          return { success: true, result };
+          stream.on("end", () => {
+            mainWindow2.webContents.send("generation-status", {
+              status: "completed",
+              result
+            });
+            isGenerating$1 = false;
+          });
+          stream.on("error", (error) => {
+            console.error("Stream error:", error);
+            mainWindow2.webContents.send("generation-status", {
+              status: "error",
+              error: error.message || "Unknown stream error"
+            });
+            isGenerating$1 = false;
+          });
+          return { success: true, streaming: true };
         } else {
           const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${apiKey}`
+              Authorization: `Bearer ${apiKey}`
             },
             body: JSON.stringify(requestBody)
           });
           if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+            throw new Error(
+              `OpenAI API error: ${response.status} ${errorText}`
+            );
           }
           const data = await response.json();
           let result = "";
@@ -7411,7 +7455,7 @@ function createWindow() {
   const { width, height } = primaryDisplay.workAreaSize;
   mainWindow = new electron.BrowserWindow({
     width: 660,
-    height: 320,
+    height: 680,
     x: width - 720,
     y: height - 650,
     show: false,
