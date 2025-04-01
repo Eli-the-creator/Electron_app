@@ -591,7 +591,7 @@ const App: React.FC = () => {
       </div>
 
       {/* Debug Panel - only visible in development */}
-      {DebugPanel && <DebugPanel isVisible={isDebugPanelVisible} />}
+      {/* {DebugPanel && <DebugPanel isVisible={isDebugPanelVisible} />} */}
     </div>
   );
 };

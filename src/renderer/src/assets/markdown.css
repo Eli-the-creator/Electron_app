@@ -1,0 +1,105 @@
+/* Add to src/renderer/src/assets/markdown.css */
+
+.markdown-body {
+  @apply text-foreground;
+}
+
+.markdown-body h1 {
+  @apply text-2xl font-bold mt-6 mb-4;
+}
+
+.markdown-body h2 {
+  @apply text-xl font-bold mt-5 mb-3;
+}
+
+.markdown-body h3 {
+  @apply text-lg font-bold mt-4 mb-2;
+}
+
+.markdown-body h4 {
+  @apply text-base font-bold mt-3 mb-2;
+}
+
+.markdown-body p {
+  @apply mb-4;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  @apply ml-5 mb-4;
+}
+
+.markdown-body ul {
+  @apply list-disc;
+}
+
+.markdown-body ol {
+  @apply list-decimal;
+}
+
+.markdown-body li {
+  @apply mb-1;
+}
+
+.markdown-body pre {
+  @apply rounded-md p-3 mb-4 text-sm;
+  background-color: #1e1e1e; /* VS Code dark theme background */
+}
+
+.markdown-body blockquote {
+  @apply border-l-4 pl-4 italic my-4;
+  border-color: hsl(var(--sidebar-primary));
+}
+
+.markdown-body code:not(pre code) {
+  @apply px-1.5 py-0.5 rounded text-sm;
+  background-color: rgba(127, 127, 127, 0.2);
+}
+
+.markdown-body table {
+  @apply w-full border-collapse mb-4;
+}
+
+.markdown-body th,
+.markdown-body td {
+  @apply border px-3 py-2;
+  border-color: rgba(127, 127, 127, 0.3);
+}
+
+.markdown-body th {
+  @apply bg-opacity-10 bg-gray-500;
+}
+
+.markdown-body hr {
+  @apply my-4;
+  border-color: rgba(127, 127, 127, 0.3);
+}
+
+.markdown-body a {
+  @apply text-blue-500 hover:underline;
+}
+
+.markdown-body img {
+  @apply max-w-full h-auto rounded-md my-4;
+}
+
+/* Animation for the cursor */
+.typing-cursor {
+  display: inline-block;
+  width: 0.5em;
+  height: 1.2em;
+  background-color: hsl(var(--sidebar-primary));
+  animation: blink 1s step-end infinite;
+  margin-left: 0.2em;
+  vertical-align: text-bottom;
+}
+
+@keyframes blink {
+  from,
+  to {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
