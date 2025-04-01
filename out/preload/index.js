@@ -76,9 +76,11 @@ const api = {
   // Speech recognition (DeepGram API)
   whisper: {
     // Transcribe current audio buffer
-    transcribeBuffer: (options) => electron.ipcRenderer.invoke("transcribe-buffer", options),
+    transcribeBuffer: (options = {}) => electron.ipcRenderer.invoke("transcribe-buffer", options),
     // Get last transcription
     getLastTranscription: () => electron.ipcRenderer.invoke("get-last-transcription"),
+    // Clean up temporary audio files
+    cleanupAudioFiles: () => electron.ipcRenderer.invoke("cleanup-audio-files"),
     // Handler for receiving transcription results
     onTranscriptionResult: (callback) => {
       const handler = (_, result) => callback(result);
@@ -104,6 +106,23 @@ const api = {
     loadConfig: () => electron.ipcRenderer.invoke("load-deepgram-config"),
     // Save DeepGram configuration
     saveConfig: (config) => electron.ipcRenderer.invoke("save-deepgram-config", config)
+  },
+  // DeepGram Live service API
+  deepgramLive: {
+    // Start live transcription
+    startLiveTranscription: (language = "en") => electron.ipcRenderer.invoke("start-live-transcription", language),
+    // Stop live transcription
+    stopLiveTranscription: () => electron.ipcRenderer.invoke("stop-live-transcription"),
+    // Get the DeepGram API key
+    getApiKey: () => electron.ipcRenderer.invoke("get-deepgram-api-key"),
+    // Send transcription result to main process
+    sendTranscriptionResult: (result) => electron.ipcRenderer.send("deepgram-transcription-result", result),
+    // Handler for live transcription status events
+    onLiveStatus: (callback) => {
+      const handler = (_, status) => callback(status);
+      electron.ipcRenderer.on("deepgram-live-status", handler);
+      return () => electron.ipcRenderer.removeListener("deepgram-live-status", handler);
+    }
   },
   // Request queue
   queue: {
@@ -162,8 +181,6 @@ const api = {
       return () => electron.ipcRenderer.removeListener("hotkey-triggered", handler);
     }
   }
-  // REMOVED: We no longer need the isScreenSharing method
-  // since the window is now natively resistant to screen capture
 };
 if (process.contextIsolated) {
   try {

@@ -300,24 +300,46 @@ const App: React.FC = () => {
   // const handleSendToLLM = async () => {
   //   if (queue.length === 0 || isGenerating) return;
 
-  //   const texts = queue
-  //     .filter((item) => item.type === "text")
-  //     .map((item) => item.content);
+  //   // Получаем текущую конфигурацию LLM
+  //   try {
+  //     const llmConfig = await window.api.llm.loadConfig();
+  //     const texts = queue
+  //       .filter((item) => item.type === "text")
+  //       .map((item) => item.content);
 
-  //   const images = queue
-  //     .filter((item) => item.type === "image")
-  //     .map((item) => item.content);
+  //     const images = queue
+  //       .filter((item) => item.type === "image")
+  //       .map((item) => item.content);
 
-  //   await generateResponse({ texts, images, streaming: true });
-  //   setActivePanel("response");
+  //     // В зависимости от провайдера, используем разные API
+  //     if (llmConfig.provider === "gemini") {
+  //       // Используем существующий Gemini API
+  //       await generateResponse({ texts, images, streaming: true });
+  //     } else {
+  //       // Временная заглушка для других провайдеров, пока не реализованы их интеграции
+  //       // В финальной версии здесь должны быть вызовы к соответствующим API
+  //       console.log(
+  //         `Using ${llmConfig.provider} with model ${llmConfig.model}`
+  //       );
+
+  //       // Пока просто используем Gemini API для всех провайдеров
+  //       await generateResponse({ texts, images, streaming: true });
+  //     }
+
+  //     setActivePanel("response");
+  //   } catch (error) {
+  //     console.error("Error sending to LLM:", error);
+  //   }
   // };
 
   const handleSendToLLM = async () => {
     if (queue.length === 0 || isGenerating) return;
 
-    // Получаем текущую конфигурацию LLM
     try {
+      // Get current LLM config
       const llmConfig = await window.api.llm.loadConfig();
+
+      // Extract texts and images from queue
       const texts = queue
         .filter((item) => item.type === "text")
         .map((item) => item.content);
@@ -326,24 +348,66 @@ const App: React.FC = () => {
         .filter((item) => item.type === "image")
         .map((item) => item.content);
 
-      // В зависимости от провайдера, используем разные API
-      if (llmConfig.provider === "gemini") {
-        // Используем существующий Gemini API
-        await generateResponse({ texts, images, streaming: true });
-      } else {
-        // Временная заглушка для других провайдеров, пока не реализованы их интеграции
-        // В финальной версии здесь должны быть вызовы к соответствующим API
-        console.log(
-          `Using ${llmConfig.provider} with model ${llmConfig.model}`
-        );
+      // Log generation attempt
+      debugLog(
+        "App",
+        `Sending to ${llmConfig?.provider || "default LLM"} with ${texts.length} text items and ${images.length} images`
+      );
 
-        // Пока просто используем Gemini API для всех провайдеров
-        await generateResponse({ texts, images, streaming: true });
+      // Choose provider and generate response
+      let success = false;
+
+      if (llmConfig?.provider === "gemini") {
+        const result = await generateResponse({
+          texts,
+          images,
+          streaming: true,
+        });
+        success = !!result;
+      } else if (llmConfig?.provider === "openai") {
+        const result = await window.api.openai.generateResponse({
+          texts,
+          images,
+          streaming: true,
+        });
+        success = result?.success;
+      } else if (llmConfig?.provider === "anthropic") {
+        const result = await window.api.anthropic.generateResponse({
+          texts,
+          images,
+          streaming: true,
+        });
+        success = result?.success;
+      } else {
+        // Fallback to gemini
+        const result = await generateResponse({
+          texts,
+          images,
+          streaming: true,
+        });
+        success = !!result;
       }
 
+      // Switch to response panel
       setActivePanel("response");
+
+      // If generation was successful, clean up temporary files
+      if (success) {
+        debugLog("App", "Generation successful, cleaning up temporary files");
+
+        try {
+          // Wait a moment to ensure files aren't still being accessed
+          setTimeout(async () => {
+            await window.api.whisper.cleanupAudioFiles();
+            debugLog("App", "Temporary files cleaned up successfully");
+          }, 1000);
+        } catch (cleanupError) {
+          console.error("Error cleaning up temporary files:", cleanupError);
+        }
+      }
     } catch (error) {
       console.error("Error sending to LLM:", error);
+      // Don't clean up files on error so they can be retried
     }
   };
 

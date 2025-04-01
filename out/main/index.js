@@ -144,9 +144,13 @@ function setupAudioCapture(mainWindow2) {
 function getAudioCaptureSettings() {
   return { ...captureSettings };
 }
+const BUFFER_DURATION_MS = 6e4;
+const MAX_BUFFER_SIZE = 1024 * 1024 * 10;
+const TEMP_DIR = path.join(electron.app.getPath("temp"), "deepgram_audio");
+const DEEPGRAM_MODELS = ["nova-2", "nova", "general"];
 let audioBuffer = [];
 let lastTranscription = null;
-const BUFFER_DURATION_MS = 5e3;
+let totalBufferSize = 0;
 let deepgramClient = null;
 function logDeepgram(message, ...args) {
   console.log(`[DeepGram] ${message}`, ...args);
@@ -168,47 +172,6 @@ function initializeDeepgramClient() {
     return null;
   }
 }
-async function transcribeAudioWithDeepgram(audioPath, language = "en") {
-  try {
-    logDeepgram(
-      `Transcribing audio with DeepGram: ${audioPath} (language: ${language})`
-    );
-    const apiKey = process.env.DEEPGRAM_API_KEY || "d0b70c87fd1a89db7417aa434dc4c378835bc033";
-    if (!apiKey) ;
-    const deepgram = sdk.createClient(apiKey);
-    const audioFile = fs.readFileSync(audioPath);
-    const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
-      audioFile,
-      {
-        model: "nova-2",
-        language,
-        // использование выбранного языка
-        smart_format: true,
-        punctuate: true
-      }
-    );
-    if (error) {
-      logDeepgram(`DeepGram API error: ${error}`);
-      return createDummyTranscription(language);
-    }
-    const transcript = result?.results?.channels[0]?.alternatives[0]?.transcript;
-    if (!transcript) {
-      logDeepgram("No transcription available in DeepGram response");
-      return createDummyTranscription(language);
-    }
-    logDeepgram(`Transcription result: "${transcript}"`);
-    const transcriptionResult = {
-      text: transcript,
-      timestamp: Date.now(),
-      language
-    };
-    lastTranscription = transcriptionResult;
-    return transcriptionResult;
-  } catch (error) {
-    logDeepgram(`Error in transcribeAudioWithDeepgram: ${error}`);
-    return createDummyTranscription(language);
-  }
-}
 function createDummyTranscription(language) {
   const now = Date.now();
   const bufferSize = audioBuffer.length;
@@ -223,51 +186,184 @@ function createDummyTranscription(language) {
     language
   };
 }
+async function transcribeWithFallback(deepgram, audioFile, language) {
+  for (const model of DEEPGRAM_MODELS) {
+    try {
+      logDeepgram(`Attempting transcription with model: ${model}`);
+      const { result, error } = await deepgram.listen.prerecorded.transcribeFile(audioFile, {
+        model,
+        language,
+        smart_format: true,
+        punctuate: true,
+        diarize: false,
+        detect_language: true
+      });
+      if (!error) {
+        logDeepgram(`Successful transcription with model: ${model}`);
+        return { result, error: null, model };
+      }
+      if (error.toString().includes("INSUFFICIENT_PERMISSIONS")) {
+        logDeepgram(`Permission error with model ${model}, trying next model`);
+        continue;
+      }
+      return { result, error, model };
+    } catch (err) {
+      logDeepgram(`Exception with model ${model}: ${err}`);
+    }
+  }
+  return {
+    result: null,
+    error: new Error("All DeepGram models failed"),
+    model: "none"
+  };
+}
+async function transcribeAudioWithDeepgram(audioPath, language = "en") {
+  try {
+    logDeepgram(
+      `Transcribing audio with DeepGram: ${audioPath} (language: ${language})`
+    );
+    const apiKey = process.env.DEEPGRAM_API_KEY || "";
+    if (!apiKey) {
+      logDeepgram(
+        "No DeepGram API key found, please configure it in settings."
+      );
+      return createDummyTranscription(language);
+    }
+    const deepgram = sdk.createClient(apiKey);
+    try {
+      let audioFile;
+      try {
+        audioFile = fs.readFileSync(audioPath);
+        logDeepgram(
+          `Successfully read audio file: ${audioPath} (${audioFile.length} bytes)`
+        );
+      } catch (readError) {
+        logDeepgram(`Error reading audio file ${audioPath}: ${readError}`);
+        return createDummyTranscription(language);
+      }
+      if (!audioFile || audioFile.length === 0) {
+        logDeepgram("Audio file is empty or corrupted");
+        return createDummyTranscription(language);
+      }
+      const { result, error, model } = await transcribeWithFallback(
+        deepgram,
+        audioFile,
+        language
+      );
+      if (error) {
+        logDeepgram(`DeepGram API error with all models: ${error}`);
+        return createDummyTranscription(language);
+      }
+      const transcript = result?.results?.channels[0]?.alternatives[0]?.transcript;
+      if (!transcript) {
+        logDeepgram("No transcription available in DeepGram response");
+        return createDummyTranscription(language);
+      }
+      logDeepgram(`Transcription result (using ${model}): "${transcript}"`);
+      const transcriptionResult = {
+        text: transcript,
+        timestamp: Date.now(),
+        language
+      };
+      lastTranscription = transcriptionResult;
+      return transcriptionResult;
+    } catch (apiError) {
+      logDeepgram(`DeepGram API processing error: ${apiError}`);
+      return createDummyTranscription(language);
+    }
+  } catch (error) {
+    logDeepgram(`Error in transcribeAudioWithDeepgram: ${error}`);
+    return createDummyTranscription(language);
+  }
+}
 function addToAudioBuffer(audioData) {
   const now = Date.now();
-  console.log(
-    `[DeepGram] Adding audio data to buffer: ${audioData.length} bytes`
-  );
   if (!audioData || audioData.length === 0) {
     console.warn("[DeepGram] Received empty audio data, ignoring");
     return;
   }
   audioBuffer.push({ data: audioData, timestamp: now });
+  totalBufferSize += audioData.length;
+  logDeepgram(`Adding audio data to buffer: ${audioData.length} bytes`);
   const cutoffTime = now - BUFFER_DURATION_MS;
   const oldLength = audioBuffer.length;
-  audioBuffer = audioBuffer.filter((item) => item.timestamp >= cutoffTime);
-  const totalBytes = audioBuffer.reduce(
-    (acc, item) => acc + item.data.length,
-    0
+  const timeFiltered = audioBuffer.filter(
+    (item) => item.timestamp >= cutoffTime
   );
-  console.log(
-    `[DeepGram] Audio buffer updated: ${audioBuffer.length} chunks (${totalBytes} bytes), removed ${oldLength - audioBuffer.length} old chunks`
+  while (totalBufferSize > MAX_BUFFER_SIZE && timeFiltered.length > 1) {
+    const removed = timeFiltered.shift();
+    if (removed) {
+      totalBufferSize -= removed.data.length;
+    }
+  }
+  audioBuffer = timeFiltered;
+  logDeepgram(
+    `Audio buffer updated: ${audioBuffer.length} chunks (${totalBufferSize} bytes), removed ${oldLength - audioBuffer.length} old chunks`
   );
 }
 function clearAudioBuffer() {
-  console.log("[DeepGram] Clearing audio buffer completely");
+  logDeepgram("Clearing audio buffer completely");
   const oldLength = audioBuffer.length;
   if (oldLength > 0) {
     const totalBytes = audioBuffer.reduce(
       (acc, item) => acc + item.data.length,
       0
     );
-    console.log(
-      `[DeepGram] Discarding ${oldLength} chunks (${totalBytes} bytes)`
-    );
+    logDeepgram(`Discarding ${oldLength} chunks (${totalBytes} bytes)`);
   }
   audioBuffer = [];
-  console.log("[DeepGram] Audio buffer cleared");
+  totalBufferSize = 0;
+  logDeepgram("Audio buffer cleared");
 }
 function getLastTranscription() {
   return lastTranscription;
 }
+function cleanupTempFiles() {
+  try {
+    logDeepgram("Cleaning up temporary audio files...");
+    if (!fs.existsSync(TEMP_DIR)) {
+      logDeepgram(`Temp directory doesn't exist: ${TEMP_DIR}`);
+      return true;
+    }
+    let files;
+    try {
+      files = fs.readdirSync(TEMP_DIR);
+      logDeepgram(`Found ${files.length} files in temp directory`);
+    } catch (readError) {
+      logDeepgram(`Error reading temp directory: ${readError}`);
+      return false;
+    }
+    let success = true;
+    let deletedCount = 0;
+    let failedCount = 0;
+    files.forEach((file) => {
+      if (file.startsWith("audio_to_transcribe_") && file.endsWith(".wav")) {
+        const filePath = path.join(TEMP_DIR, file);
+        try {
+          logDeepgram(`Deleting file: ${file}`);
+          fs.unlinkSync(filePath);
+          deletedCount++;
+        } catch (deleteError) {
+          logDeepgram(`Error deleting file ${file}: ${deleteError}`);
+          failedCount++;
+          success = false;
+        }
+      }
+    });
+    logDeepgram(
+      `Cleanup complete: ${deletedCount} files deleted, ${failedCount} failed`
+    );
+    return success;
+  } catch (error) {
+    logDeepgram(`Error during temp file cleanup: ${error}`);
+    return false;
+  }
+}
 function setupWhisperService(mainWindow2) {
   logDeepgram("Setting up DeepGram transcription service");
-  const tempDir = path.join(electron.app.getPath("temp"), "deepgram_audio");
-  if (!fs.existsSync(tempDir)) {
-    logDeepgram(`Creating temp directory: ${tempDir}`);
-    fs.mkdirSync(tempDir, { recursive: true });
+  if (!fs.existsSync(TEMP_DIR)) {
+    logDeepgram(`Creating temp directory: ${TEMP_DIR}`);
+    fs.mkdirSync(TEMP_DIR, { recursive: true });
   }
   initializeDeepgramClient();
   electron.ipcMain.handle(
@@ -291,9 +387,10 @@ function setupWhisperService(mainWindow2) {
         logDeepgram(
           `Combined buffer size: ${combinedBuffer.length} bytes from ${audioBuffer.length} chunks`
         );
+        const timestamp = Date.now();
         const tempAudioPath = path.join(
-          tempDir,
-          `audio_to_transcribe_${Date.now()}.wav`
+          TEMP_DIR,
+          `audio_to_transcribe_${timestamp}.wav`
         );
         logDeepgram(`Saving audio to: ${tempAudioPath}`);
         fs.writeFileSync(tempAudioPath, combinedBuffer);
@@ -302,13 +399,20 @@ function setupWhisperService(mainWindow2) {
         }
         let language = options.language;
         if (!language) {
-          const audioSettings = getAudioCaptureSettings();
-          if (audioSettings && audioSettings.language) {
-            language = audioSettings.language;
-            logDeepgram(`Using language from capture settings: ${language}`);
-          } else {
+          try {
+            const audioSettings = getAudioCaptureSettings();
+            if (audioSettings && audioSettings.language) {
+              language = audioSettings.language;
+              logDeepgram(`Using language from capture settings: ${language}`);
+            } else {
+              language = "en";
+              logDeepgram(
+                `No language in settings, using default: ${language}`
+              );
+            }
+          } catch (settingsErr) {
+            logDeepgram(`Error getting audio settings: ${settingsErr}`);
             language = "en";
-            logDeepgram(`No language in settings, using default: ${language}`);
           }
         }
         const result = await transcribeAudioWithDeepgram(
@@ -349,6 +453,14 @@ function setupWhisperService(mainWindow2) {
   });
   electron.ipcMain.on("add-audio-data", (_, audioData) => {
     addToAudioBuffer(audioData);
+  });
+  electron.ipcMain.handle("cleanup-audio-files", () => {
+    logDeepgram("Received cleanup request for audio files");
+    const success = cleanupTempFiles();
+    return {
+      success,
+      message: success ? "Temporary audio files cleaned up successfully" : "Error cleaning up some temporary files"
+    };
   });
   mainWindow2.webContents.send("whisper-status", {
     status: "ready",

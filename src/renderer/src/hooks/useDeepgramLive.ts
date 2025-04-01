@@ -347,7 +347,7 @@ export function useDeepgramLive() {
             channels: 1,
             encoding: "linear16",
             language: lang,
-            model: "nova-2",
+            model: "nova-3",
             smart_format: true,
             punctuate: true,
             interim_results: true,

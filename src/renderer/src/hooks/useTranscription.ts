@@ -1,4 +1,5 @@
 // src/renderer/src/hooks/useTranscription.ts с обновлениями
+import { debugLog } from "@renderer/lib/utils";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 interface TranscriptionResult {
@@ -51,11 +52,9 @@ export function useTranscription() {
   }, []);
 
   // Function to transcribe current audio buffer with DeepGram
+
   // const transcribeBuffer = useCallback(
   //   async (language?: string) => {
-  //     // Use provided language or fall back to the one from settings
-  //     const langToUse = language || transcriptionLanguage;
-
   //     // Don't start a new transcription if one is already in progress
   //     if (pendingTranscriptionRef.current) {
   //       console.log("Transcription already in progress, skipping new request");
@@ -63,15 +62,17 @@ export function useTranscription() {
   //     }
 
   //     try {
+  //       // Если язык явно указан, используем его, иначе не передаем параметр вообще
+  //       const options = language ? { language } : {};
+
   //       console.log(
-  //         `Transcribing buffer with DeepGram API (language: ${langToUse})`
+  //         `Transcribing buffer with DeepGram API${language ? ` (language: ${language})` : " (using settings)"}`
   //       );
   //       pendingTranscriptionRef.current = true;
   //       setTranscriptionStatus({ status: "processing" });
 
-  //       const result = await window.api.whisper.transcribeBuffer({
-  //         language: langToUse,
-  //       });
+  //       // Передаем options без явного указания language, если его не было в аргументах
+  //       const result = await window.api.whisper.transcribeBuffer(options);
 
   //       if (result) {
   //         console.log(`DeepGram transcription successful: "${result.text}"`);
@@ -115,7 +116,7 @@ export function useTranscription() {
       }
 
       try {
-        // Если язык явно указан, используем его, иначе не передаем параметр вообще
+        // If language explicitly provided, use it, otherwise don't pass parameter
         const options = language ? { language } : {};
 
         console.log(
@@ -124,8 +125,22 @@ export function useTranscription() {
         pendingTranscriptionRef.current = true;
         setTranscriptionStatus({ status: "processing" });
 
-        // Передаем options без явного указания language, если его не было в аргументах
-        const result = await window.api.whisper.transcribeBuffer(options);
+        // Use a timeout to prevent hanging if no response
+        const timeoutPromise = new Promise<null>((resolve) => {
+          setTimeout(() => {
+            if (pendingTranscriptionRef.current) {
+              console.log("Transcription request timed out after 15 seconds");
+              pendingTranscriptionRef.current = false;
+              resolve(null);
+            }
+          }, 15000); // 15 seconds timeout
+        });
+
+        // Create the transcription request
+        const transcribePromise = window.api.whisper.transcribeBuffer(options);
+
+        // Race between timeout and actual response
+        const result = await Promise.race([transcribePromise, timeoutPromise]);
 
         if (result) {
           console.log(`DeepGram transcription successful: "${result.text}"`);
@@ -291,6 +306,22 @@ export function useTranscription() {
     };
   }, [stopContinuousTranscription]);
 
+  const cleanupAudioFiles = useCallback(async () => {
+    try {
+      await window.api.whisper.cleanupAudioFiles();
+      debugLog(
+        "useTranscription",
+        "Successfully cleaned up temporary audio files"
+      );
+      return true;
+    } catch (err) {
+      const errorMessage = `Error cleaning up audio files: ${err instanceof Error ? err.message : String(err)}`;
+      setError(errorMessage);
+      debugLog("useTranscription", errorMessage);
+      return false;
+    }
+  }, []);
+
   return {
     lastTranscription,
     transcriptionStatus,
@@ -301,5 +332,6 @@ export function useTranscription() {
     setLastTranscription, // Export setLastTranscription for use in App.tsx
     transcriptionLanguage, // Export language for use elsewhere
     setTranscriptionLanguage, // Allow explicit setting of language
+    cleanupAudioFiles,
   };
 }
