@@ -192,42 +192,31 @@ export const MainPanel: React.FC<MainPanelProps> = ({
   };
 
   return (
-    <div className="p-2 bg-background/90 border-b flex justify-between items-center">
-      <div className="flex items-center gap-2">
-        {/* Кнопка записи аудио */}
-        <Button
-          size="icon"
-          variant={
-            isCapturing
-              ? isTranscribing
-                ? "destructive"
-                : "default"
-              : "default"
-          }
-          onClick={onToggleCapture}
-          title={
-            isCapturing
-              ? isTranscribing
-                ? "Остановить запись и добавить в очередь"
-                : "Остановить запись"
-              : "Начать запись"
-          }>
-          {isCapturing ? <MicOff size={16} /> : <Mic size={16} />}
-        </Button>
-
+    <div className="p-2 bg-background/90 border-b flex justify-between items-center ">
+      <div className="flex  items-center w-full gap-1">
         {/* Панель навигации (только в полном режиме) */}
         {uiMode === "full" && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center justify-start  gap-1">
             <Button
               size="sm"
               variant={activePanel === "transcription" ? "default" : "ghost"}
               onClick={() => handlePanelChange("transcription")}
               title="Транскрипция"
-              className="h-8 px-2">
-              <Edit size={14} className="mr-1" />
-              Текст{" "}
-              {isTranscribing && (
-                <span className="ml-1 text-xs animate-pulse">●</span>
+              className="text-[12px] font-semibold  h-8 px-0">
+              {isTranscribing ? (
+                <div className=" flex gap-2 items-center  px-3 py-2 rounded-md">
+                  <span className="ml-1 p-1 rounded-full text-xs bg-red-500 animate-pulse">
+                    {" "}
+                  </span>
+                  <p className="">Recording... </p>
+                </div>
+              ) : (
+                <div className=" flex gap-2 items-center  px-3 py-2 rounded-md">
+                  <p className="">Record Voice</p>
+                  <span className="bg-white/[0.09] border border-white/[0.1] leading-none text-white/60 px-1.5 py-1 rounded-md">
+                    ⌘ + I
+                  </span>
+                </div>
               )}
             </Button>
 
@@ -236,9 +225,25 @@ export const MainPanel: React.FC<MainPanelProps> = ({
               variant={activePanel === "queue" ? "default" : "ghost"}
               onClick={() => handlePanelChange("queue")}
               title="Очередь запросов"
-              className="h-8 px-2">
-              <Image size={14} className="mr-1" />
-              Очередь {queueSize > 0 && `(${queueSize})`}
+              className="h-8 px-0">
+              <div className=" flex gap-2 items-center text-[12px] font-semibold px-3 py-2 rounded-md">
+                <p className="">Screenshot</p>
+                <span className="bg-white/[0.09] border border-white/[0.1] leading-none text-white/60 px-1.5 py-1 rounded-md">
+                  ⌘ + H
+                </span>
+              </div>
+            </Button>
+
+            <Button
+              size="sm"
+              variant={activePanel === "queue" ? "default" : "ghost"}
+              onClick={() => handlePanelChange("queue")}
+              title="Очередь запросов"
+              className="h-8 px-4  text-[12px] font-semibold">
+              Queue:
+              <span className="bg-white/[0.09] border border-white/[0.1] leading-none text-white/60 px-1.5 py-1 rounded-md">
+                {queueSize > 0 ? `${queueSize}` : "Empty"}
+              </span>
             </Button>
 
             <Button
@@ -246,47 +251,24 @@ export const MainPanel: React.FC<MainPanelProps> = ({
               variant={activePanel === "response" ? "default" : "ghost"}
               onClick={() => handlePanelChange("response")}
               title="Ответ"
-              className="h-8 px-2">
-              <Send size={14} className="mr-1" />
-              Ответ
-            </Button>
-
-            <Button
-              size="sm"
-              variant={activePanel === "settings" ? "default" : "ghost"}
-              onClick={() => handlePanelChange("settings")}
-              title="Настройки"
-              className="h-8 px-2">
-              <Settings size={14} className="mr-1" />
-              Настройки
+              className="h-8 px-2 text-[12px] font-semibold">
+              <p className="">Send</p>
+              <span className="bg-white/[0.09] border border-white/[0.1] leading-none text-white/60 px-1.5 py-1 rounded-md">
+                ⌘ + Enter
+              </span>
             </Button>
           </div>
         )}
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Кнопка отправки запроса */}
-        {uiMode === "full" && (
-          <Button
-            size="sm"
-            variant="default"
-            onClick={onSendToLLM}
-            disabled={queueSize === 0 || isGenerating}
-            title="Отправить запрос"
-            className="h-8">
-            <Send size={14} className="mr-1" />
-            {isGenerating ? "Генерация..." : "Отправить"}
-          </Button>
-        )}
-
-        {/* Кнопка переключения режима отображения */}
         <Button
-          size="icon"
-          variant="outline"
-          onClick={() => setUIMode(uiMode === "full" ? "compact" : "full")}
-          title={uiMode === "full" ? "Компактный режим" : "Полный режим"}
-          className="h-8 w-8">
-          {uiMode === "full" ? <Minimize size={14} /> : <Expand size={14} />}
+          size="lg"
+          variant={activePanel === "settings" ? "default" : "ghost"}
+          onClick={() => handlePanelChange("settings")}
+          title="Настройки"
+          className="h-8 px-2">
+          <Settings size={14} className="mr-1" />
         </Button>
       </div>
     </div>

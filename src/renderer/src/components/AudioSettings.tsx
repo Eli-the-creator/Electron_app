@@ -113,6 +113,7 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({ className }) => {
           <Switch
             id="capture-microphone"
             checked={settings.captureMicrophone}
+            className=""
             onCheckedChange={(checked) =>
               setSettings({ ...settings, captureMicrophone: checked })
             }
@@ -128,6 +129,7 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({ className }) => {
           </div>
           <Switch
             id="capture-system-audio"
+            className=""
             checked={settings.captureSystemAudio}
             onCheckedChange={(checked) =>
               setSettings({ ...settings, captureSystemAudio: checked })
@@ -145,7 +147,7 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({ className }) => {
             <SelectTrigger id="language">
               <SelectValue placeholder="Select language" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-black/90">
               <SelectItem value="en">English</SelectItem>
               <SelectItem value="ru">Russian</SelectItem>
               <SelectItem value="pl">Polish</SelectItem>
@@ -173,7 +175,7 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({ className }) => {
             <SelectTrigger id="sample-rate">
               <SelectValue placeholder="Select sample rate" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-black/90">
               <SelectItem value="8000">8 kHz (Low quality)</SelectItem>
               <SelectItem value="16000">16 kHz (Recommended)</SelectItem>
               <SelectItem value="22050">22.05 kHz</SelectItem>
@@ -197,7 +199,7 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({ className }) => {
             <SelectTrigger id="channels">
               <SelectValue placeholder="Select channels" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-black/90">
               <SelectItem value="1">Mono (Recommended for speech)</SelectItem>
               <SelectItem value="2">Stereo</SelectItem>
             </SelectContent>
@@ -216,7 +218,7 @@ const AudioSettings: React.FC<AudioSettingsProps> = ({ className }) => {
         )}
       </CardContent>
       <CardFooter>
-        <Button onClick={handleSave} disabled={isSaving}>
+        <Button variant={"outline"} onClick={handleSave} disabled={isSaving}>
           <Save size={14} className="mr-1" />
           {isSaving ? "Saving..." : "Save"}
         </Button>

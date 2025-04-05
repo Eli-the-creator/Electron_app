@@ -1,19 +1,6 @@
 // src/renderer/src/components/SettingsPanel.tsx
 import React, { useState, useEffect } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Slider } from "./ui/slider";
-import { Label } from "./ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "./ui/card";
-import { Save, Settings as SettingsIcon } from "lucide-react";
 import DeepGramConfig from "./DeepGramConfig";
 import LLMConfig from "./LLMConfig";
 import AudioSettings from "./AudioSettings";
@@ -57,12 +44,18 @@ export const SettingsPanel: React.FC = () => {
   };
 
   return (
-    <div className="p-4 h-full overflow-y-auto">
-      <Tabs defaultValue="llm" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="llm">LLM</TabsTrigger>
-          <TabsTrigger value="audio">Audio</TabsTrigger>
-          <TabsTrigger value="deepgram">DeepGram</TabsTrigger>
+    <div className="p-2 h-full overflow-y-auto">
+      <Tabs defaultValue="audio" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 gap-2">
+          <TabsTrigger className="border rounded-lg " value="audio">
+            Audio
+          </TabsTrigger>
+          <TabsTrigger className="border rounded-lg " value="llm">
+            LLM
+          </TabsTrigger>
+          {/* <TabsTrigger className="border rounded-lg " value="deepgram">
+            DeepGram
+          </TabsTrigger> */}
         </TabsList>
 
         {/* LLM Settings Tab */}

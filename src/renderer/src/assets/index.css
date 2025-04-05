@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+* {
+  cursor: default !important;
+}
+
 .frosted-glass {
   background: rgba(26, 26, 26, 0.8);
   backdrop-filter: blur(8px);

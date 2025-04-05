@@ -13,12 +13,12 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Save, MessageSquare } from "lucide-react";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue 
+  SelectValue,
 } from "./ui/select";
 import { useLLM } from "../hooks/useLLM";
 
@@ -27,8 +27,9 @@ interface LLMConfigProps {
 }
 
 const LLMConfig: React.FC<LLMConfigProps> = ({ className }) => {
-  const { config, isLoading, error, updateConfig, getModelsForProvider } = useLLM();
-  
+  const { config, isLoading, error, updateConfig, getModelsForProvider } =
+    useLLM();
+
   const [provider, setProvider] = useState<string>("gemini");
   const [apiKey, setApiKey] = useState<string>("");
   const [model, setModel] = useState<string>("");
@@ -57,7 +58,7 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ className }) => {
     if (provider) {
       const options = getModelsForProvider(provider as any);
       setModelOptions(options);
-      
+
       // If current model doesn't exist in new provider options, set to first option
       if (!options.includes(model) && options.length > 0) {
         setModel(options[0]);
@@ -120,10 +121,9 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ className }) => {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="llm-provider">Provider</Label>
-          <Select 
-            value={provider} 
-            onValueChange={(value) => setProvider(value)}
-          >
+          <Select
+            value={provider}
+            onValueChange={(value) => setProvider(value)}>
             <SelectTrigger id="llm-provider">
               <SelectValue placeholder="Select provider" />
             </SelectTrigger>
@@ -140,30 +140,56 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ className }) => {
           <Input
             id="llm-api-key"
             type="password"
-            placeholder={`Enter your ${provider === 'anthropic' ? 'Anthropic' : provider === 'openai' ? 'OpenAI' : 'Gemini'} API key`}
+            placeholder={`Enter your ${provider === "anthropic" ? "Anthropic" : provider === "openai" ? "OpenAI" : "Gemini"} API key`}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
           />
           <p className="text-xs text-muted-foreground">
-            {provider === 'openai' && (
-              <>Get your API key from the <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">OpenAI dashboard</a></>
+            {provider === "openai" && (
+              <>
+                Get your API key from the{" "}
+                <a
+                  href="https://platform.openai.com/api-keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline">
+                  OpenAI dashboard
+                </a>
+              </>
             )}
-            {provider === 'anthropic' && (
-              <>Get your API key from the <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Anthropic console</a></>
+            {provider === "anthropic" && (
+              <>
+                Get your API key from the{" "}
+                <a
+                  href="https://console.anthropic.com/settings/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline">
+                  Anthropic console
+                </a>
+              </>
             )}
-            {provider === 'gemini' && (
-              <>Get your API key from the <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Google AI Studio</a></>
+            {provider === "gemini" && (
+              <>
+                Get your API key from the{" "}
+                <a
+                  href="https://ai.google.dev/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline">
+                  Google AI Studio
+                </a>
+              </>
             )}
           </p>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="llm-model">Model</Label>
-          <Select 
-            value={model} 
+          <Select
+            value={model}
             onValueChange={(value) => setModel(value)}
-            disabled={modelOptions.length === 0}
-          >
+            disabled={modelOptions.length === 0}>
             <SelectTrigger id="llm-model">
               <SelectValue placeholder="Select model" />
             </SelectTrigger>
@@ -184,9 +210,7 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ className }) => {
 
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <Label htmlFor="max-tokens">
-              Maximum tokens: {maxTokens}
-            </Label>
+            <Label htmlFor="max-tokens">Maximum tokens: {maxTokens}</Label>
           </div>
           <Slider
             id="max-tokens"
@@ -216,8 +240,8 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ className }) => {
             onValueChange={(values) => setTemperature(values[0])}
           />
           <p className="text-xs text-muted-foreground">
-            Affects response randomness: lower - more predictable, higher
-            - more creative
+            Affects response randomness: lower - more predictable, higher - more
+            creative
           </p>
         </div>
 
@@ -229,7 +253,10 @@ const LLMConfig: React.FC<LLMConfigProps> = ({ className }) => {
         )}
       </CardContent>
       <CardFooter>
-        <Button onClick={handleSave} disabled={isSaving || !apiKey.trim()}>
+        <Button
+          variant="outline"
+          onClick={handleSave}
+          disabled={isSaving || !apiKey.trim()}>
           <Save size={14} className="mr-1" />
           {isSaving ? "Saving..." : "Save"}
         </Button>

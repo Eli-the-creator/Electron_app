@@ -358,21 +358,6 @@ const App: React.FC = () => {
       }
       // Switch to response panel
       setActivePanel("response");
-
-      // If generation was successful, clean up temporary files
-      // if (success) {
-      //   debugLog("App", "Generation successful, cleaning up temporary files");
-
-      //   try {
-      //     // Wait a moment to ensure files aren't still being accessed
-      //     setTimeout(async () => {
-      //       await window.api.whisper.cleanupAudioFiles();
-      //       debugLog("App", "Temporary files cleaned up successfully");
-      //     }, 1000);
-      //   } catch (cleanupError) {
-      //     console.error("Error cleaning up temporary files:", cleanupError);
-      //   }
-      // }
     } catch (error) {
       console.error("Error sending to LLM:", error);
       // Don't clean up files on error so they can be retried
@@ -589,11 +574,13 @@ const App: React.FC = () => {
           <span>Queue items: {queue.length}</span>
         </div>
       </div>
-
-      {/* Debug Panel - only visible in development */}
-      {/* {DebugPanel && <DebugPanel isVisible={isDebugPanelVisible} />} */}
     </div>
   );
 };
 
-export default App;
+// Login with supabase
+const AppSecurContent = () => {
+  return <App />;
+};
+
+export default AppSecurContent;

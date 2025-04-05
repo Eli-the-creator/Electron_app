@@ -23,21 +23,21 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({
   const responseContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new chunks arrive
-  useEffect(() => {
-    if (responseContainerRef.current && isGenerating) {
-      responseContainerRef.current.scrollTop =
-        responseContainerRef.current.scrollHeight;
-    }
-  }, [streamingChunks, isGenerating]);
+  // useEffect(() => {
+  //   if (responseContainerRef.current && isGenerating) {
+  //     responseContainerRef.current.scrollTop =
+  //       responseContainerRef.current.scrollHeight;
+  //   }
+  // }, [streamingChunks, isGenerating]);
 
   // Copy response to clipboard
-  const handleCopyResponse = () => {
-    if (response || streamingChunks.join("")) {
-      navigator.clipboard.writeText(
-        isGenerating ? streamingChunks.join("") : response
-      );
-    }
-  };
+  // const handleCopyResponse = () => {
+  //   if (response || streamingChunks.join("")) {
+  //     navigator.clipboard.writeText(
+  //       isGenerating ? streamingChunks.join("") : response
+  //     );
+  //   }
+  // };
 
   // Custom renderer for code blocks
   const CodeBlock = {
@@ -66,7 +66,7 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({
         <div className="mb-4">
           <Sparkles className="w-10 h-10" />
         </div>
-        <p className="text-center">Здесь будет отображаться ответ от модели.</p>
+        <p className="text-center">Here will be your response.</p>
       </div>
     );
   }
@@ -75,11 +75,11 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({
     <div className="flex flex-col h-full p-4 overflow-hidden">
       {/* Panel header */}
       <div className="flex justify-between items-center mb-2">
-        <h3 className="text-sm font-medium">Ответ</h3>
+        <h3 className="text-sm font-medium">Response</h3>
         {isGenerating && (
           <div className="flex items-center">
             <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></span>
-            <span className="text-xs text-muted-foreground">Генерация...</span>
+            <span className="text-xs text-muted-foreground">Genereting...</span>
           </div>
         )}
       </div>
@@ -102,26 +102,12 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({
 
       {/* Action buttons */}
       <div className="flex justify-between mt-3">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCopyResponse}
-          disabled={!response && streamingChunks.length === 0}>
-          <Copy size={14} className="mr-1" />
-          Копировать
+        <Button variant="outline" size="sm" disabled={true}>
+          Clear context queue add new stuff
+          <kbd className="rounded-md border bg-muted px-1.5 py-0.5 text-[14px] text-muted-foreground">
+            ⌘ + R
+          </kbd>
         </Button>
-
-        {isGenerating ? (
-          <Button variant="destructive" size="sm" onClick={onStopGeneration}>
-            <StopCircle size={14} className="mr-1" />
-            Остановить
-          </Button>
-        ) : (
-          <Button variant="default" size="sm" disabled>
-            <Send size={14} className="mr-1" />
-            Отправить новый запрос
-          </Button>
-        )}
       </div>
     </div>
   );
